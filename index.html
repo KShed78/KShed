@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Weather</title>
+  <style>
+    :root {
+      --bg-color: #0b111e;
+      --accent-color: #00f2fe;
+      --card-bg: rgba(255, 255, 255, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background: var(--bg-color);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 20px 16px;
+      transition: background 0.3s ease;
+      position: relative;
+    }
+    .app { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* Top Navigation Bar with Hamburger Icon */
+    .nav-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding-top: 4px;
+    }
+    .nav-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--accent-color);
+      text-transform: uppercase;
+    }
+    .hamburger-btn {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 20px;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      transition: background 0.2s ease;
+    }
+    .hamburger-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Modal / Drawer Settings Menu */
+    .menu-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      display: none;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 60px;
+      z-index: 100;
+    }
+    .menu-overlay.active {
+      display: flex;
+    }
+    .settings-modal {
+      width: 90%;
+      max-width: 380px;
+      background: #151d2a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 12px;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      color: #a0aec0;
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    /* Search & Input Form Group */
+    .search-group {
+      display: flex;
+      gap: 8px;
+    }
+    .search-input {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    .search-btn {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent-color);
+      color: #000;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .setting-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent-color);
+      letter-spacing: 0.5px;
+    }
+    .unit-toggle-bar {
+      display: flex;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .unit-option {
+      flex: 1;
+      padding: 8px;
+      text-align: center;
+      border: none;
+      background: transparent;
+      color: #a0aec0;
+      font-weight: 600;
+      font-size: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .unit-option.active {
+      background: var(--accent-color);
+      color: #000;
+    }
+
+    select, input[type="color"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .header { text-align: center; margin-top: 6px; }
+    .city { font-size: 28px; font-weight: 700; }
+    .temp { font-size: 76px; font-weight: 200; margin: -6px 0; }
+    .condition { font-size: 18px; color: #a0aec0; text-transform: capitalize; }
+    
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .card-title { font-size: 11px; font-weight: 700; color: #a0aec0; letter-spacing: 0.5px; }
+    .card-value { font-size: 22px; font-weight: 700; margin-top: 6px; }
+    .card-sub { font-size: 12px; color: var(--accent-color); margin-top: 4px; font-weight: 500; }
+    
+    /* Hourly Scroll Container */
+    .hourly-scroll {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .hourly-scroll::-webkit-scrollbar { display: none; }
+    .hourly-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 48px;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .hourly-time { color: #a0aec0; font-size: 12px; }
+    .hourly-temp { font-weight: 600; }
+
+    /* Alert Banner Styles */
+    .alert-card {
+      background: rgba(255, 75, 75, 0.15);
+      border: 1px solid rgba(255, 75, 75, 0.4);
+      border-radius: 16px;
+      padding: 14px 16px;
+    }
+    .alert-card.clear {
+      background: rgba(75, 255, 150, 0.1);
+      border: 1px solid rgba(75, 255, 150, 0.3);
+    }
+    .alert-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .alert-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #ff6b6b;
+    }
+    .alert-card.clear .alert-title { color: #51cf66; }
+    .alert-times {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #cbd5e1;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 6px 10px;
+      border-radius: 8px;
+    }
+    .alert-desc {
+      font-size: 12px;
+      color: #e2e8f0;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    .forecast-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    .forecast-item:last-child { border: none; }
+    .day { width: 60px; font-weight: 600; }
+    .rain-vol { font-size: 12px; color: var(--accent-color); width: 80px; text-align: center; }
+    
+    .status-msg { text-align: center; font-size: 13px; color: #a0aec0; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Top Navigation Bar -->
+  <div class="nav-bar">
+    <div class="nav-title">Forecast</div>
+    <button class="hamburger-btn" onclick="toggleMenu(true)" aria-label="Open Settings">☰</button>
+  </div>
+
+  <div class="status-msg" id="statusState">Fetching live weather...</div>
+
+  <!-- Main Weather Display -->
+  <div class="header">
+    <div class="city" id="cityName">New York</div>
+    <div class="temp" id="currentTemp">--°</div>
+    <div class="condition" id="currentCondition">--</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">FEELS LIKE</div>
+      <div class="card-value" id="feelsLike">--°</div>
+      <div class="card-sub" style="color: #a0aec0;">Humidity & Wind</div>
+    </div>
+    <div class="card">
+      <div class="card-title">RAINFALL TODAY</div>
+      <div class="card-value" id="rainTotal">--</div>
+      <div class="card-sub" id="nextRain">Checking next rain...</div>
+    </div>
+  </div>
+
+  <!-- Hourly Forecast -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom: 12px; color: var(--accent-color);">HOURLY FORECAST (24 HRS)</div>
+    <div class="hourly-scroll" id="hourlyList">Loading hourly data...</div>
+  </div>
+
+  <!-- Severe Weather & Storm Alerts -->
+  <div id="alertBox" class="alert-card clear">
+    <div class="alert-header">
+      <div class="alert-title" id="alertTitle">🛡️ NO ACTIVE WEATHER WARNINGS</div>
+    </div>
+    <div class="alert-times" id="alertTimes" style="display: none;">
+      <span><strong>Issued:</strong> <span id="alertIssued">--</span></span>
+      <span><strong>Ends:</strong> <span id="alertEnds">--</span></span>
+    </div>
+    <div class="alert-desc" id="alertDesc">Conditions are currently calm with no severe storm alerts in effect.</div>
+  </div>
+
+  <!-- 5-Day Forecast -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom: 10px; color: var(--accent-color);">5-DAY FORECAST</div>
+    <div id="forecastList">Loading forecast...</div>
+  </div>
+</div>
+
+<!-- Modal Settings Drawer Hidden Behind Hamburger Icon -->
+<div class="menu-overlay" id="menuOverlay" onclick="handleOverlayClick(event)">
+  <div class="settings-modal">
+    <div class="modal-header">
+      <div class="modal-title">Settings & Location</div>
+      <button class="close-btn" onclick="toggleMenu(false)">&times;</button>
+    </div>
+
+    <!-- City Search -->
+    <div class="setting-item">
+      <label class="setting-label">LOCATION</label>
+      <div class="search-group">
+        <input type="text" id="cityInput" class="search-input" placeholder="Enter city name..." value="New York" onkeydown="if(event.key==='Enter') executeSearch()" />
+        <button class="search-btn" onclick="executeSearch()">Search</button>
+      </div>
+    </div>
+
+    <!-- Temperature Unit Switch -->
+    <div class="setting-item">
+      <label class="setting-label">TEMPERATURE UNIT</label>
+      <div class="unit-toggle-bar">
+        <button class="unit-option active" id="unitF" onclick="setUnit(false)">Fahrenheit (°F)</button>
+        <button class="unit-option" id="unitC" onclick="setUnit(true)">Celsius (°C)</button>
+      </div>
+    </div>
+
+    <!-- Background Theme -->
+    <div class="setting-item">
+      <label class="setting-label">BACKGROUND THEME</label>
+      <select id="themeSelect" onchange="updateTheme(this.value)">
+        <option value="#0b111e">Midnight Blue</option>
+        <option value="#000000">OLED Black</option>
+        <option value="#181a1b">Slate Charcoal</option>
+      </select>
+    </div>
+
+    <!-- Accent Color -->
+    <div class="setting-item">
+      <label class="setting-label">ACCENT COLOR</label>
+      <input type="color" value="#00f2fe" onchange="updateAccent(this.value)" />
+    </div>
+  </div>
+</div>
+
+<script>
+  let isCelsius = false;
+  let currentLat = 40.7128;
+  let currentLon = -74.0060;
+  let currentCityName = "New York, US";
+
+  const weatherCodes = {
+    0: { text: "Clear Sky", icon: "☀️" },
+    1: { text: "Mainly Clear", icon: "🌤️" },
+    2: { text: "Partly Cloudy", icon: "⛅" },
+    3: { text: "Overcast", icon: "☁️" },
+    45: { text: "Foggy", icon: "🌫️" },
+    48: { text: "Depositing Rime Fog", icon: "🌫️" },
+    51: { text: "Light Drizzle", icon: "🌧️" },
+    53: { text: "Drizzle", icon: "🌧️" },
+    55: { text: "Heavy Drizzle", icon: "🌧️" },
+    61: { text: "Slight Rain", icon: "🌧️" },
+    63: { text: "Moderate Rain", icon: "🌧️" },
+    65: { text: "Heavy Rain", icon: "🌧️" },
+    71: { text: "Slight Snow", icon: "❄️" },
+    73: { text: "Moderate Snow", icon: "❄️" },
+    75: { text: "Heavy Snow", icon: "❄️" },
+    80: { text: "Rain Showers", icon: "🌦️" },
+    81: { text: "Moderate Showers", icon: "🌦️" },
+    82: { text: "Violent Showers", icon: "⛈️" },
+    95: { text: "Thunderstorm", icon: "⛈️" }
+  };
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  function toggleMenu(show) {
+    const overlay = document.getElementById('menuOverlay');
+    if (show) {
+      overlay.classList.add('active');
+    } else {
+      overlay.classList.remove('active');
+    }
+  }
+
+  function handleOverlayClick(event) {
+    if (event.target.id === 'menuOverlay') {
+      toggleMenu(false);
+    }
+  }
+
+  function showStatus(text, isError = false) {
+    const el = document.getElementById('statusState');
+    el.style.display = 'block';
+    el.style.color = isError ? '#ff6b6b' : '#a0aec0';
+    el.innerText = text;
+  }
+
+  function hideStatus() {
+    document.getElementById('statusState').style.display = 'none';
+  }
+
+  function setUnit(useCelsius) {
+    if (isCelsius === useCelsius) return;
+    isCelsius = useCelsius;
+    
+    document.getElementById('unitF').classList.toggle('active', !isCelsius);
+    document.getElementById('unitC').classList.toggle('active', isCelsius);
+    
+    getWeatherData(currentLat, currentLon, currentCityName);
+  }
+
+  async function executeSearch() {
+    await fetchWeather();
+    toggleMenu(false);
+  }
+
+  async function fetchWeather() {
+    const input = document.getElementById('cityInput').value.trim();
+    if (!input) return;
+
+    showStatus('Searching city...');
+
+    try {
+      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(input)}&count=1&language=en&format=json`);
+      if (!geoRes.ok) throw new Error('Geocoding service unavailable');
+      
+      const geoData = await geoRes.json();
+
+      if (!geoData.results || geoData.results.length === 0) {
+        showStatus('City not found. Try another search.', true);
+        return;
+      }
+
+      const location = geoData.results[0];
+      currentLat = location.latitude;
+      currentLon = location.longitude;
+      
+      const countryStr = location.country_code ? location.country_code.toUpperCase() : (location.country || '');
+      currentCityName = countryStr ? `${location.name}, ${countryStr}` : location.name;
+
+      await getWeatherData(currentLat, currentLon, currentCityName);
+    } catch (err) {
+      console.error(err);
+      showStatus('Unable to reach weather servers. Check internet connection.', true);
+    }
+  }
+
+  async function getWeatherData(lat, lon, name) {
+    showStatus('Updating weather data...');
+    const unitParam = isCelsius ? 'celsius' : 'fahrenheit';
+    const precipUnit = isCelsius ? 'mm' : 'inch';
+
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,weather_code&hourly=temperature_2m,precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&timezone=auto`;
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Weather forecast unavailable');
+      
+      const data = await res.json();
+
+      // Set City & Current Values
+      document.getElementById('cityName').innerText = name;
+      
+      const tempVal = Math.round(data.current.temperature_2m ?? 0);
+      const feelsVal = Math.round(data.current.apparent_temperature ?? tempVal);
+      const precipVal = data.current.precipitation ?? 0;
+      
+      document.getElementById('currentTemp').innerText = `${tempVal}°`;
+      document.getElementById('feelsLike').innerText = `${feelsVal}°`;
+      document.getElementById('rainTotal').innerText = `${precipVal} ${precipUnit}`;
+
+      const code = data.current.weather_code ?? 0;
+      const codeInfo = weatherCodes[code] || { text: "Cloudy", icon: "☁️" };
+      document.getElementById('currentCondition').innerText = `${codeInfo.icon} ${codeInfo.text}`;
+
+      // Render Hourly Forecast & Next Rain
+      renderHourlyAndRain(data.hourly, precipUnit);
+
+      // Render Severe Weather Alerts with Issued & End times
+      checkWeatherAlerts(data);
+
+      // Render 5-Day Forecast
+      renderDailyForecast(data.daily, precipUnit);
+
+      hideStatus();
+    } catch (err) {
+      console.error(err);
+      showStatus('Error loading forecast data. Please try again.', true);
+    }
+  }
+
+  function renderHourlyAndRain(hourlyData, precipUnit) {
+    const hourlyContainer = document.getElementById('hourlyList');
+    hourlyContainer.innerHTML = '';
+
+    if (!hourlyData || !hourlyData.time) {
+      hourlyContainer.innerHTML = '<div>Hourly data unavailable</div>';
+      return;
+    }
+
+    const now = new Date();
+    let nextRainFound = false;
+    let count = 0;
+
+    for (let i = 0; i < hourlyData.time.length && count < 24; i++) {
+      const itemTime = new Date(hourlyData.time[i]);
+      if (itemTime < new Date(now.getTime() - 3600000)) continue;
+
+      count++;
+      const hrs = itemTime.getHours();
+      const timeFormatted = count === 1 ? 'Now' : `${hrs % 12 || 12} ${hrs >= 12 ? 'PM' : 'AM'}`;
+      
+      const hourlyCode = hourlyData.weather_code ? hourlyData.weather_code[i] : 0;
+      const icon = (weatherCodes[hourlyCode] || { icon: "☁️" }).icon;
+      const temp = Math.round(hourlyData.temperature_2m[i]);
+      const rainVol = hourlyData.precipitation ? hourlyData.precipitation[i] : 0;
+
+      if (!nextRainFound && rainVol > 0) {
+        nextRainFound = true;
+        const dayLabel = itemTime.getDate() === now.getDate() ? 'Today' : 'Tomorrow';
+        document.getElementById('nextRain').innerText = `Next: ${dayLabel} @ ${timeFormatted} (${rainVol} ${precipUnit})`;
+      }
+
+      hourlyContainer.innerHTML += `
+        <div class="hourly-item">
+          <span class="hourly-time">${timeFormatted}</span>
+          <span style="font-size: 20px;">${icon}</span>
+          <span class="hourly-temp">${temp}°</span>
+        </div>
+      `;
+    }
+
+    if (!nextRainFound) {
+      document.getElementById('nextRain').innerText = 'No rain expected next 24h';
+    }
+  }
+
+  function checkWeatherAlerts(data) {
+    const alertBox = document.getElementById('alertBox');
+    const alertTitle = document.getElementById('alertTitle');
+    const alertTimes = document.getElementById('alertTimes');
+    const alertIssued = document.getElementById('alertIssued');
+    const alertEnds = document.getElementById('alertEnds');
+    const alertDesc = document.getElementById('alertDesc');
+
+    const severeCodes = [82, 75, 95];
+    const hourly = data.hourly;
+
+    if (!hourly || !hourly.weather_code) {
+      setClearAlert();
+      return;
+    }
+
+    const now = new Date();
+    let firstSevereIndex = -1;
+    let lastSevereIndex = -1;
+    let alertType = "";
+
+    for (let i = 0; i < hourly.time.length; i++) {
+      const itemTime = new Date(hourly.time[i]);
+      if (itemTime < new Date(now.getTime() - 3600000)) continue;
+
+      const code = hourly.weather_code[i];
+      if (severeCodes.includes(code)) {
+        if (firstSevereIndex === -1) {
+          firstSevereIndex = i;
+          if (code === 95) alertType = "⚡ Thunderstorm Warning";
+          else if (code === 82) alertType = "🌧️ Severe Downpour Warning";
+          else if (code === 75) alertType = "❄️ Heavy Snowfall Advisory";
+        }
+        lastSevereIndex = i;
+      }
+    }
+
+    if (firstSevereIndex !== -1) {
+      const startTime = new Date(hourly.time[firstSevereIndex]);
+      const endTime = new Date(hourly.time[lastSevereIndex]);
+      endTime.setHours(endTime.getHours() + 1);
+
+      alertBox.className = "alert-card";
+      alertTitle.innerHTML = `⚠️ ${alertType.toUpperCase()}`;
+      
+      alertIssued.innerText = formatTimeLabel(startTime, now);
+      alertEnds.innerText = formatTimeLabel(endTime, now);
+      alertTimes.style.display = 'flex';
+
+      alertDesc.innerText = `Severe weather conditions (${alertType.replace(/^[^\s]+\s/, '')}) expected in your area during the highlighted time window.`;
+    } else {
+      setClearAlert();
+    }
+
+    function setClearAlert() {
+      alertBox.className = "alert-card clear";
+      alertTitle.innerHTML = "🛡️ NO ACTIVE SEVERE WEATHER ALERTS";
+      alertTimes.style.display = 'none';
+      alertDesc.innerText = "Current conditions and 24-hour forecast indicate normal, safe weather.";
+    }
+  }
+
+  function formatTimeLabel(dateObj, nowObj) {
+    const dayLabel = dateObj.getDate() === nowObj.getDate() ? 'Today' : 'Tomorrow';
+    const hrs = dateObj.getHours();
+    const timeStr = `${hrs % 12 || 12}:00 ${hrs >= 12 ? 'PM' : 'AM'}`;
+    return `${dayLabel} at ${timeStr}`;
+  }
+
+  function renderDailyForecast(dailyData, precipUnit) {
+    const forecastContainer = document.getElementById('forecastList');
+    forecastContainer.innerHTML = '';
+
+    if (dailyData && dailyData.time) {
+      const daysToLoop = Math.min(5, dailyData.time.length);
+      
+      for (let i = 0; i < daysToLoop; i++) {
+        let dayLabel = 'Today';
+        
+        if (i > 0) {
+          const dateParts = dailyData.time[i].split('-');
+          const year = parseInt(dateParts[0], 10);
+          const month = parseInt(dateParts[1], 10) - 1;
+          const day = parseInt(dateParts[2], 10);
+          
+          const d = new Date(year, month, day);
+          dayLabel = dayNames[d.getDay()] || 'Day';
+        }
+
+        const dayCode = dailyData.weather_code ? dailyData.weather_code[i] : 0;
+        const dayInfo = weatherCodes[dayCode] || { icon: "☁️" };
+        
+        const rain = dailyData.precipitation_sum ? dailyData.precipitation_sum[i] : 0;
+        const min = Math.round(dailyData.temperature_2m_min ? dailyData.temperature_2m_min[i] : 0);
+        const max = Math.round(dailyData.temperature_2m_max ? dailyData.temperature_2m_max[i] : 0);
+
+        forecastContainer.innerHTML += `
+          <div class="forecast-item">
+            <span class="day">${dayLabel}</span>
+            <span>${dayInfo.icon}</span>
+            <span class="rain-vol">💧 ${rain} ${precipUnit}</span>
+            <span>${min}°</span>
+            <strong>${max}°</strong>
+          </div>
+        `;
+      }
+    } else {
+      forecastContainer.innerHTML = '<div style="font-size:13px; color:#a0aec0;">No forecast available.</div>';
+    }
+  }
+
+  function updateTheme(color) {
+    document.documentElement.style.setProperty('--bg-color', color);
+  }
+  function updateAccent(color) {
+    document.documentElement.style.setProperty('--accent-color', color);
+  }
+
+  // Load weather when page is ready
+  window.addEventListener('DOMContentLoaded', () => {
+    fetchWeather();
+  });
+</script>
+
+</body>
+</html>
