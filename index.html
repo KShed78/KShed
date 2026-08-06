@@ -6,6 +6,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>KShed Weather</title>
+  
+  <!-- Leaflet CSS for Weather Radar Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <style>
     :root {
       --bg-color: #0b111e;
@@ -69,7 +73,7 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* Modal / Drawer Settings Menu */
+    /* Modal Settings Menu */
     .menu-overlay {
       position: fixed;
       top: 0;
@@ -82,7 +86,7 @@
       justify-content: center;
       align-items: flex-start;
       padding-top: 60px;
-      z-index: 100;
+      z-index: 1000;
     }
     .menu-overlay.active {
       display: flex;
@@ -119,7 +123,7 @@
       line-height: 1;
     }
 
-    /* Search & Input Form Group */
+    /* Search & Input Form */
     .search-group {
       display: flex;
       gap: 8px;
@@ -219,11 +223,17 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-width: 48px;
+      min-width: 52px;
       gap: 6px;
       font-size: 13px;
     }
-    .hourly-time { color: #a0aec0; font-size: 12px; }
+    .hourly-item.sun-event {
+      background: rgba(255, 200, 0, 0.12);
+      border: 1px solid rgba(255, 200, 0, 0.3);
+      border-radius: 12px;
+      padding: 6px 4px;
+    }
+    .hourly-time { color: #a0aec0; font-size: 11px; white-space: nowrap; }
     .hourly-temp { font-weight: 600; }
 
     /* Alert Banner Styles */
@@ -239,19 +249,8 @@
       border: 1px solid rgba(75, 255, 150, 0.3);
       box-shadow: none;
     }
-    .alert-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .alert-title {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      font-weight: 700;
-      color: #ff6b6b;
-    }
+    .alert-header { display: flex; justify-content: space-between; align-items: center; }
+    .alert-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #ff6b6b; }
     .alert-card.clear .alert-title { color: #51cf66; }
     .alert-times {
       display: flex;
@@ -263,18 +262,72 @@
       padding: 6px 10px;
       border-radius: 8px;
     }
-    .alert-desc {
-      font-size: 12px;
-      color: #e2e8f0;
-      margin-top: 8px;
-      line-height: 1.4;
-    }
+    .alert-desc { font-size: 12px; color: #e2e8f0; margin-top: 8px; line-height: 1.4; }
 
     .forecast-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
     .forecast-item:last-child { border: none; }
     .day { width: 60px; font-weight: 600; }
-    .rain-vol { font-size: 12px; color: var(--accent-color); width: 80px; text-align: center; }
-    
+    .rain-vol { font-size: 12px; color: var(--accent-color); width: 90px; text-align: center; }
+
+    /* Radar Map Section */
+    .radar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .radar-time-options {
+      display: flex;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 2px;
+    }
+    .radar-time-btn {
+      background: transparent;
+      border: none;
+      color: #a0aec0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .radar-time-btn.active {
+      background: var(--accent-color);
+      color: #000;
+    }
+    #map {
+      width: 100%;
+      height: 240px;
+      border-radius: 12px;
+      z-index: 1;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .radar-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .radar-play-btn {
+      background: var(--accent-color);
+      border: none;
+      color: #000;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .radar-time-label {
+      font-size: 12px;
+      color: #cbd5e1;
+      font-weight: 600;
+      flex: 1;
+      text-align: right;
+    }
+
     .status-msg { text-align: center; font-size: 13px; color: #a0aec0; display: none; }
   </style>
 </head>
@@ -308,13 +361,13 @@
     <div class="card">
       <div class="card-title">RAINFALL TODAY</div>
       <div class="card-value" id="rainTotal">--</div>
-      <div class="card-sub" id="nextRain">Checking next rain...</div>
+      <div class="card-sub" id="nextRain">Checking rain data...</div>
     </div>
   </div>
 
-  <!-- Hourly Forecast -->
+  <!-- Hourly Forecast (With Sunset & Sunrise) -->
   <div class="card">
-    <div class="card-title" style="margin-bottom: 12px; color: var(--accent-color);">HOURLY FORECAST (24 HRS)</div>
+    <div class="card-title" style="margin-bottom: 12px; color: var(--accent-color);">HOURLY FORECAST & SUNSET</div>
     <div class="hourly-scroll" id="hourlyList">Loading hourly data...</div>
   </div>
 
@@ -335,6 +388,27 @@
     <div class="card-title" style="margin-bottom: 10px; color: var(--accent-color);">5-DAY FORECAST</div>
     <div id="forecastList">Loading forecast...</div>
   </div>
+
+  <!-- Weather Satellite / Radar Section (Below 5-Day Forecast) -->
+  <div class="card">
+    <div class="radar-header">
+      <div class="card-title" style="color: var(--accent-color);">LIVE SATELLITE & RADAR</div>
+      <div class="radar-time-options">
+        <button class="radar-time-btn" id="rTime1h" onclick="setRadarWindow(1)">1 HR</button>
+        <button class="radar-time-btn active" id="rTime2h" onclick="setRadarWindow(2)">2 HR</button>
+        <button class="radar-time-btn" id="rTime12h" onclick="setRadarWindow(12)">12 HR</button>
+      </div>
+    </div>
+    
+    <div id="map"></div>
+
+    <div class="radar-controls">
+      <button class="radar-play-btn" id="radarPlayBtn" onclick="toggleRadarPlay()">▶ PLAY</button>
+      <input type="range" id="radarSlider" min="0" max="0" value="0" style="flex: 2;" oninput="onRadarSliderChange(this.value)" />
+      <span class="radar-time-label" id="radarTimeDisplay">Live Radar</span>
+    </div>
+  </div>
+
 </div>
 
 <!-- Modal Settings Drawer Hidden Behind Hamburger Icon -->
@@ -381,11 +455,23 @@
   </div>
 </div>
 
+<!-- Leaflet JS for Weather Radar -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
   let isCelsius = true;
   let currentLat = 53.5461;
   let currentLon = -113.4938;
   let currentCityName = "Edmonton, CA";
+
+  // Radar Map Variables
+  let map = null;
+  let cityMarker = null;
+  let radarLayers = [];
+  let radarTimestamps = [];
+  let currentRadarIndex = 0;
+  let radarTimer = null;
+  let activeRadarWindowHours = 2;
 
   const weatherCodes = {
     0: { text: "Clear Sky", icon: "☀️" },
@@ -500,7 +586,8 @@
     const speedLabel = isCelsius ? 'km/h' : 'mph';
 
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&hourly=temperature_2m,precipitation,weather_code,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&wind_speed_unit=${speedUnit}&timezone=auto`;
+      // Enhanced API request with sunset, sunrise, precipitation probabilities and sums
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&wind_speed_unit=${speedUnit}&timezone=auto`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('Weather forecast unavailable');
@@ -511,22 +598,28 @@
       
       const tempVal = Math.round(data.current.temperature_2m ?? 0);
       const feelsVal = Math.round(data.current.apparent_temperature ?? tempVal);
-      const precipVal = data.current.precipitation ?? 0;
       const humidityVal = data.current.relative_humidity_2m ?? '--';
       const windSpeedVal = data.current.wind_speed_10m ? Math.round(data.current.wind_speed_10m) : '--';
       
+      // Calculate today's exact accumulated rainfall total
+      const rainToday = (data.daily && data.daily.precipitation_sum) ? data.daily.precipitation_sum[0] : (data.current.precipitation ?? 0);
+      const rainProbToday = (data.daily && data.daily.precipitation_probability_max) ? data.daily.precipitation_probability_max[0] : 0;
+
       document.getElementById('currentTemp').innerText = `${tempVal}°`;
       document.getElementById('feelsLike').innerText = `${feelsVal}°`;
       document.getElementById('feelsLikeSub').innerText = `💧 ${humidityVal}% | 🌬️ ${windSpeedVal} ${speedLabel}`;
-      document.getElementById('rainTotal').innerText = `${precipVal} ${precipUnit}`;
+      document.getElementById('rainTotal').innerText = `${rainToday} ${precipUnit}`;
 
       const code = data.current.weather_code ?? 0;
       const codeInfo = weatherCodes[code] || { text: "Cloudy", icon: "☁️" };
       document.getElementById('currentCondition').innerText = `${codeInfo.icon} ${codeInfo.text}`;
 
-      renderHourlyAndRain(data.hourly, precipUnit);
+      renderHourlyAndRain(data, precipUnit);
       await checkWeatherAlerts(data, lat, lon, name);
       renderDailyForecast(data.daily, precipUnit);
+
+      // Update Radar Map center and tiles
+      updateRadarMap(lat, lon);
 
       hideStatus();
     } catch (err) {
@@ -535,9 +628,12 @@
     }
   }
 
-  function renderHourlyAndRain(hourlyData, precipUnit) {
+  function renderHourlyAndRain(data, precipUnit) {
     const hourlyContainer = document.getElementById('hourlyList');
     hourlyContainer.innerHTML = '';
+
+    const hourlyData = data.hourly;
+    const dailyData = data.daily;
 
     if (!hourlyData || !hourlyData.time) {
       hourlyContainer.innerHTML = '<div>Hourly data unavailable</div>';
@@ -546,8 +642,28 @@
 
     const now = new Date();
     let nextRainFound = false;
-    let count = 0;
 
+    // Collect upcoming 24h items plus Sunrise/Sunset events
+    let hourlyItems = [];
+
+    // Extract sunrise and sunset times
+    let sunEvents = [];
+    if (dailyData && dailyData.sunrise && dailyData.sunset) {
+      dailyData.sunrise.forEach(str => {
+        const d = new Date(str);
+        if (d >= new Date(now.getTime() - 3600000) && d <= new Date(now.getTime() + 86400000)) {
+          sunEvents.push({ time: d, type: 'Sunrise', icon: '🌄' });
+        }
+      });
+      dailyData.sunset.forEach(str => {
+        const d = new Date(str);
+        if (d >= new Date(now.getTime() - 3600000) && d <= new Date(now.getTime() + 86400000)) {
+          sunEvents.push({ time: d, type: 'Sunset', icon: '🌅' });
+        }
+      });
+    }
+
+    let count = 0;
     for (let i = 0; i < hourlyData.time.length && count < 24; i++) {
       const itemTime = new Date(hourlyData.time[i]);
       if (itemTime < new Date(now.getTime() - 3600000)) continue;
@@ -560,24 +676,61 @@
       const icon = (weatherCodes[hourlyCode] || { icon: "☁️" }).icon;
       const temp = Math.round(hourlyData.temperature_2m[i]);
       const rainVol = hourlyData.precipitation ? hourlyData.precipitation[i] : 0;
+      const rainProb = hourlyData.precipitation_probability ? hourlyData.precipitation_probability[i] : 0;
 
       if (!nextRainFound && rainVol > 0) {
         nextRainFound = true;
         const dayLabel = itemTime.getDate() === now.getDate() ? 'Today' : 'Tomorrow';
-        document.getElementById('nextRain').innerText = `Next: ${dayLabel} @ ${timeFormatted} (${rainVol} ${precipUnit})`;
+        document.getElementById('nextRain').innerText = `Next: ${dayLabel} @ ${timeFormatted} (${rainVol} ${precipUnit} | ${rainProb}%)`;
       }
 
-      hourlyContainer.innerHTML += `
-        <div class="hourly-item">
-          <span class="hourly-time">${timeFormatted}</span>
-          <span style="font-size: 20px;">${icon}</span>
-          <span class="hourly-temp">${temp}°</span>
-        </div>
-      `;
+      hourlyItems.push({
+        time: itemTime,
+        formattedTime: timeFormatted,
+        isSunEvent: false,
+        icon: icon,
+        temp: `${temp}°`
+      });
     }
 
+    // Merge Sun Events chronologically
+    sunEvents.forEach(sun => {
+      const formattedSunTime = sun.time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      hourlyItems.push({
+        time: sun.time,
+        formattedTime: formattedSunTime,
+        isSunEvent: true,
+        icon: sun.icon,
+        temp: sun.type
+      });
+    });
+
+    hourlyItems.sort((a, b) => a.time - b.time);
+
+    // Render sorted list
+    hourlyItems.forEach(item => {
+      if (item.isSunEvent) {
+        hourlyContainer.innerHTML += `
+          <div class="hourly-item sun-event">
+            <span class="hourly-time" style="color:#ffd700; font-weight:700;">${item.formattedTime}</span>
+            <span style="font-size: 20px;">${item.icon}</span>
+            <span class="hourly-temp" style="font-size: 11px; color:#ffe066;">${item.temp}</span>
+          </div>
+        `;
+      } else {
+        hourlyContainer.innerHTML += `
+          <div class="hourly-item">
+            <span class="hourly-time">${item.formattedTime}</span>
+            <span style="font-size: 20px;">${item.icon}</span>
+            <span class="hourly-temp">${item.temp}</span>
+          </div>
+        `;
+      }
+    });
+
     if (!nextRainFound) {
-      document.getElementById('nextRain').innerText = 'No rain expected next 24h';
+      const maxProbToday = (dailyData && dailyData.precipitation_probability_max) ? dailyData.precipitation_probability_max[0] : 0;
+      document.getElementById('nextRain').innerText = maxProbToday > 0 ? `Max rain chance today: ${maxProbToday}%` : 'No rain expected next 24h';
     }
   }
 
@@ -629,7 +782,6 @@
         const itemTime = new Date(hourly.time[i]);
         const hoursFromNow = (itemTime - now) / (1000 * 60 * 60);
 
-        // Only evaluate severe weather happening now or within the next 3 hours
         if (hoursFromNow >= -1 && hoursFromNow <= 3) {
           const code = hourly.weather_code[i];
           const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
@@ -716,6 +868,125 @@
     } else {
       forecastContainer.innerHTML = '<div style="font-size:13px; color:#a0aec0;">No forecast available.</div>';
     }
+  }
+
+  /* --- SATELLITE & WEATHER RADAR FUNCTIONS --- */
+  function initRadarMap() {
+    if (map) return;
+
+    map = L.map('map', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([currentLat, currentLon], 7);
+
+    // Dark Map Base Layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 12,
+      subdomains: 'abcd'
+    }).addTo(map);
+
+    cityMarker = L.marker([currentLat, currentLon]).addTo(map);
+  }
+
+  async function updateRadarMap(lat, lon) {
+    initRadarMap();
+    map.setView([lat, lon], 7);
+    if (cityMarker) cityMarker.setLatLng([lat, lon]);
+
+    try {
+      const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+      const data = await res.json();
+      
+      const host = data.host;
+      let frames = data.radar ? (data.radar.past || []).concat(data.radar.nowcast || []) : [];
+
+      if (!frames.length) return;
+
+      // Filter frames based on selected time window (1h, 2h, or 12h)
+      const now = Math.floor(Date.now() / 1000);
+      const windowSeconds = activeRadarWindowHours * 3600;
+      frames = frames.filter(f => (now - f.time) <= windowSeconds);
+
+      // Clear existing radar tile layers
+      radarLayers.forEach(layer => map.removeLayer(layer));
+      radarLayers = [];
+      radarTimestamps = [];
+
+      // Create radar tile layer for each timestamp frame
+      frames.forEach((frame) => {
+        const layer = L.tileLayer(`${host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+          tileSize: 256,
+          opacity: 0,
+          zIndex: 10
+        });
+        radarLayers.push(layer);
+        radarTimestamps.push(frame.time);
+      });
+
+      // Add all layers to map
+      radarLayers.forEach(l => l.addTo(map));
+
+      // Setup Slider
+      const slider = document.getElementById('radarSlider');
+      slider.max = radarLayers.length - 1;
+      
+      // Display current frame
+      showRadarFrame(radarLayers.length - 1);
+    } catch (err) {
+      console.warn("Could not load radar imagery:", err);
+    }
+  }
+
+  function showRadarFrame(index) {
+    if (!radarLayers.length) return;
+    
+    // Hide all layers
+    radarLayers.forEach((layer, i) => {
+      layer.setOpacity(i === index ? 0.75 : 0);
+    });
+
+    currentRadarIndex = index;
+    document.getElementById('radarSlider').value = index;
+
+    if (radarTimestamps[index]) {
+      const d = new Date(radarTimestamps[index] * 1000);
+      document.getElementById('radarTimeDisplay').innerText = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+  }
+
+  function onRadarSliderChange(val) {
+    stopRadarPlay();
+    showRadarFrame(parseInt(val, 10));
+  }
+
+  function toggleRadarPlay() {
+    if (radarTimer) {
+      stopRadarPlay();
+    } else {
+      document.getElementById('radarPlayBtn').innerText = '⏸ PAUSE';
+      radarTimer = setInterval(() => {
+        let nextIndex = (currentRadarIndex + 1) % radarLayers.length;
+        showRadarFrame(nextIndex);
+      }, 700);
+    }
+  }
+
+  function stopRadarPlay() {
+    if (radarTimer) {
+      clearInterval(radarTimer);
+      radarTimer = null;
+      document.getElementById('radarPlayBtn').innerText = '▶ PLAY';
+    }
+  }
+
+  function setRadarWindow(hours) {
+    activeRadarWindowHours = hours;
+    document.getElementById('rTime1h').classList.toggle('active', hours === 1);
+    document.getElementById('rTime2h').classList.toggle('active', hours === 2);
+    document.getElementById('rTime12h').classList.toggle('active', hours === 12);
+    
+    stopRadarPlay();
+    updateRadarMap(currentLat, currentLon);
   }
 
   function updateTheme(color) {
