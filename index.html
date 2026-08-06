@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Weather</title>
+  <title>KShed Weather - Edmonton</title>
   <style>
     :root {
       --bg-color: #0b111e;
@@ -34,9 +34,9 @@
       padding-top: 4px;
     }
     .nav-title {
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 1px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
       color: var(--accent-color);
       text-transform: uppercase;
     }
@@ -218,14 +218,16 @@
 
     /* Alert Banner Styles */
     .alert-card {
-      background: rgba(255, 75, 75, 0.15);
-      border: 1px solid rgba(255, 75, 75, 0.4);
+      background: rgba(255, 75, 75, 0.18);
+      border: 1px solid rgba(255, 75, 75, 0.5);
       border-radius: 16px;
       padding: 14px 16px;
+      box-shadow: 0 4px 12px rgba(255, 0, 0, 0.15);
     }
     .alert-card.clear {
       background: rgba(75, 255, 150, 0.1);
       border: 1px solid rgba(75, 255, 150, 0.3);
+      box-shadow: none;
     }
     .alert-header {
       display: flex;
@@ -247,7 +249,7 @@
       margin-top: 8px;
       font-size: 11px;
       color: #cbd5e1;
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.25);
       padding: 6px 10px;
       border-radius: 8px;
     }
@@ -271,7 +273,7 @@
 <div class="app">
   <!-- Top Navigation Bar -->
   <div class="nav-bar">
-    <div class="nav-title">Forecast</div>
+    <div class="nav-title">KShed Weather</div>
     <button class="hamburger-btn" onclick="toggleMenu(true)" aria-label="Open Settings">☰</button>
   </div>
 
@@ -279,7 +281,7 @@
 
   <!-- Main Weather Display -->
   <div class="header">
-    <div class="city" id="cityName">New York</div>
+    <div class="city" id="cityName">Edmonton, CA</div>
     <div class="temp" id="currentTemp">--°</div>
     <div class="condition" id="currentCondition">--</div>
   </div>
@@ -288,7 +290,7 @@
     <div class="card">
       <div class="card-title">FEELS LIKE</div>
       <div class="card-value" id="feelsLike">--°</div>
-      <div class="card-sub" style="color: #a0aec0;">Humidity & Wind</div>
+      <div class="card-sub" id="feelsLikeSub">--% | -- km/h</div>
     </div>
     <div class="card">
       <div class="card-title">RAINFALL TODAY</div>
@@ -334,7 +336,7 @@
     <div class="setting-item">
       <label class="setting-label">LOCATION</label>
       <div class="search-group">
-        <input type="text" id="cityInput" class="search-input" placeholder="Enter city name..." value="New York" onkeydown="if(event.key==='Enter') executeSearch()" />
+        <input type="text" id="cityInput" class="search-input" placeholder="Enter city name..." value="Edmonton, AB, Canada" onkeydown="if(event.key==='Enter') executeSearch()" />
         <button class="search-btn" onclick="executeSearch()">Search</button>
       </div>
     </div>
@@ -343,8 +345,8 @@
     <div class="setting-item">
       <label class="setting-label">TEMPERATURE UNIT</label>
       <div class="unit-toggle-bar">
-        <button class="unit-option active" id="unitF" onclick="setUnit(false)">Fahrenheit (°F)</button>
-        <button class="unit-option" id="unitC" onclick="setUnit(true)">Celsius (°C)</button>
+        <button class="unit-option" id="unitF" onclick="setUnit(false)">Fahrenheit (°F)</button>
+        <button class="unit-option active" id="unitC" onclick="setUnit(true)">Celsius (°C)</button>
       </div>
     </div>
 
@@ -367,10 +369,12 @@
 </div>
 
 <script>
-  let isCelsius = false;
-  let currentLat = 40.7128;
-  let currentLon = -74.0060;
-  let currentCityName = "New York, US";
+  // Default set to Celsius
+  let isCelsius = true;
+  // Default set to Edmonton, Alberta, Canada
+  let currentLat = 53.5461;
+  let currentLon = -113.4938;
+  let currentCityName = "Edmonton, CA";
 
   const weatherCodes = {
     0: { text: "Clear Sky", icon: "☀️" },
@@ -391,7 +395,9 @@
     80: { text: "Rain Showers", icon: "🌦️" },
     81: { text: "Moderate Showers", icon: "🌦️" },
     82: { text: "Violent Showers", icon: "⛈️" },
-    95: { text: "Thunderstorm", icon: "⛈️" }
+    95: { text: "Thunderstorm", icon: "⛈️" },
+    96: { text: "Thunderstorm with Hail", icon: "⛈️" },
+    99: { text: "Heavy Thunderstorm with Hail", icon: "⛈️" }
   };
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -472,9 +478,12 @@
     showStatus('Updating weather data...');
     const unitParam = isCelsius ? 'celsius' : 'fahrenheit';
     const precipUnit = isCelsius ? 'mm' : 'inch';
+    const speedUnit = isCelsius ? 'kmh' : 'mph';
+    const speedLabel = isCelsius ? 'km/h' : 'mph';
 
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation,weather_code&hourly=temperature_2m,precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&timezone=auto`;
+      // Updated URL to include relative_humidity_2m, wind_speed_10m, and wind_speed_unit
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&hourly=temperature_2m,precipitation,weather_code,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&wind_speed_unit=${speedUnit}&timezone=auto`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('Weather forecast unavailable');
@@ -487,9 +496,12 @@
       const tempVal = Math.round(data.current.temperature_2m ?? 0);
       const feelsVal = Math.round(data.current.apparent_temperature ?? tempVal);
       const precipVal = data.current.precipitation ?? 0;
+      const humidityVal = data.current.relative_humidity_2m ?? '--';
+      const windSpeedVal = data.current.wind_speed_10m ? Math.round(data.current.wind_speed_10m) : '--';
       
       document.getElementById('currentTemp').innerText = `${tempVal}°`;
       document.getElementById('feelsLike').innerText = `${feelsVal}°`;
+      document.getElementById('feelsLikeSub').innerText = `💧 ${humidityVal}% | 🌬️ ${windSpeedVal} ${speedLabel}`;
       document.getElementById('rainTotal').innerText = `${precipVal} ${precipUnit}`;
 
       const code = data.current.weather_code ?? 0;
@@ -499,8 +511,8 @@
       // Render Hourly Forecast & Next Rain
       renderHourlyAndRain(data.hourly, precipUnit);
 
-      // Render Severe Weather Alerts with Issued & End times
-      checkWeatherAlerts(data);
+      // Render Weather Alerts
+      await checkWeatherAlerts(data, lat, lon);
 
       // Render 5-Day Forecast
       renderDailyForecast(data.daily, precipUnit);
@@ -558,7 +570,7 @@
     }
   }
 
-  function checkWeatherAlerts(data) {
+  async function checkWeatherAlerts(data, lat, lon) {
     const alertBox = document.getElementById('alertBox');
     const alertTitle = document.getElementById('alertTitle');
     const alertTimes = document.getElementById('alertTimes');
@@ -566,32 +578,59 @@
     const alertEnds = document.getElementById('alertEnds');
     const alertDesc = document.getElementById('alertDesc');
 
-    const severeCodes = [82, 75, 95];
-    const hourly = data.hourly;
-
-    if (!hourly || !hourly.weather_code) {
-      setClearAlert();
-      return;
+    // Attempt direct fetch of Environment Canada / official warnings layer
+    try {
+      const alertApi = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&warnings=true&timezone=auto`;
+      const res = await fetch(alertApi);
+      if (res.ok) {
+        const warnData = await res.json();
+        if (warnData.warnings && warnData.warnings.length > 0) {
+          const activeWarn = warnData.warnings[0];
+          alertBox.className = "alert-card";
+          alertTitle.innerHTML = `⚠️ ${activeWarn.event.toUpperCase()}`;
+          
+          if (activeWarn.start && activeWarn.end) {
+            alertIssued.innerText = formatTimeLabel(new Date(activeWarn.start), new Date());
+            alertEnds.innerText = formatTimeLabel(new Date(activeWarn.end), new Date());
+            alertTimes.style.display = 'flex';
+          } else {
+            alertTimes.style.display = 'none';
+          }
+          
+          alertDesc.innerText = activeWarn.description || `Official weather alert issued for Edmonton and surrounding area by Environment Canada.`;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Direct warnings endpoint check passed, falling back to forecast analysis.");
     }
+
+    // Expanded severe alert codes fallback: 80, 81, 82 (Showers/Downpours), 95, 96, 99 (Thunderstorms / Hail)
+    const severeCodes = [80, 81, 82, 95, 96, 99];
+    const hourly = data.hourly;
 
     const now = new Date();
     let firstSevereIndex = -1;
     let lastSevereIndex = -1;
     let alertType = "";
 
-    for (let i = 0; i < hourly.time.length; i++) {
-      const itemTime = new Date(hourly.time[i]);
-      if (itemTime < new Date(now.getTime() - 3600000)) continue;
+    if (hourly && hourly.weather_code) {
+      for (let i = 0; i < hourly.time.length; i++) {
+        const itemTime = new Date(hourly.time[i]);
+        if (itemTime < new Date(now.getTime() - 3600000)) continue;
 
-      const code = hourly.weather_code[i];
-      if (severeCodes.includes(code)) {
-        if (firstSevereIndex === -1) {
-          firstSevereIndex = i;
-          if (code === 95) alertType = "⚡ Thunderstorm Warning";
-          else if (code === 82) alertType = "🌧️ Severe Downpour Warning";
-          else if (code === 75) alertType = "❄️ Heavy Snowfall Advisory";
+        const code = hourly.weather_code[i];
+        const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
+
+        if (severeCodes.includes(code) || precip > 2.0) {
+          if (firstSevereIndex === -1) {
+            firstSevereIndex = i;
+            if ([95, 96, 99].includes(code)) alertType = "⚡ Severe Thunderstorm Watch / Warning";
+            else if ([81, 82].includes(code) || precip > 2.0) alertType = "🌧️ Heavy Rain & Flood Watch";
+            else alertType = "⛈️ Active Severe Weather Advisory";
+          }
+          lastSevereIndex = i;
         }
-        lastSevereIndex = i;
       }
     }
 
@@ -607,7 +646,7 @@
       alertEnds.innerText = formatTimeLabel(endTime, now);
       alertTimes.style.display = 'flex';
 
-      alertDesc.innerText = `Severe weather conditions (${alertType.replace(/^[^\s]+\s/, '')}) expected in your area during the highlighted time window.`;
+      alertDesc.innerText = `Severe weather conditions expected in your area during the highlighted time window. Torrential rain, lightning, hail, or strong wind gusts are possible.`;
     } else {
       setClearAlert();
     }
@@ -676,9 +715,9 @@
     document.documentElement.style.setProperty('--accent-color', color);
   }
 
-  // Load weather when page is ready
+  // Load Edmonton weather by default on start in Celsius
   window.addEventListener('DOMContentLoaded', () => {
-    fetchWeather();
+    getWeatherData(currentLat, currentLon, currentCityName);
   });
 </script>
 
