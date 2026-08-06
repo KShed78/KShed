@@ -347,7 +347,7 @@
 
   <!-- Main Weather Display -->
   <div class="header">
-    <div class="city" id="cityName">Edmonton, CA</div>
+    <div class="city" id="cityName">Detecting location...</div>
     <div class="temp" id="currentTemp">--°</div>
     <div class="condition" id="currentCondition">--</div>
   </div>
@@ -383,13 +383,13 @@
     <div class="alert-desc" id="alertDesc">Conditions are currently calm with no severe storm alerts in effect.</div>
   </div>
 
-  <!-- 5-Day Forecast -->
+  <!-- 7-Day Forecast -->
   <div class="card">
-    <div class="card-title" style="margin-bottom: 10px; color: var(--accent-color);">5-DAY FORECAST</div>
+    <div class="card-title" style="margin-bottom: 10px; color: var(--accent-color);">7-DAY FORECAST</div>
     <div id="forecastList">Loading forecast...</div>
   </div>
 
-  <!-- Weather Satellite / Radar Section (Below 5-Day Forecast) -->
+  <!-- Weather Satellite / Radar Section -->
   <div class="card">
     <div class="radar-header">
       <div class="card-title" style="color: var(--accent-color);">LIVE SATELLITE & RADAR</div>
@@ -423,9 +423,10 @@
     <div class="setting-item">
       <label class="setting-label">LOCATION</label>
       <div class="search-group">
-        <input type="text" id="cityInput" class="search-input" placeholder="Enter city name..." value="Edmonton, AB, Canada" onkeydown="if(event.key==='Enter') executeSearch()" />
+        <input type="text" id="cityInput" class="search-input" placeholder="Enter city name..." value="" onkeydown="if(event.key==='Enter') executeSearch()" />
         <button class="search-btn" onclick="executeSearch()">Search</button>
       </div>
+      <button class="search-btn" style="margin-top: 4px; background: rgba(255,255,255,0.12); color: #fff;" onclick="useCurrentLocation()">📍 Use Current Geolocation</button>
     </div>
 
     <!-- Temperature Unit Switch -->
@@ -450,7 +451,7 @@
     <!-- Accent Color -->
     <div class="setting-item">
       <label class="setting-label">ACCENT COLOR</label>
-      <input type="color" value="#00f2fe" onchange="updateAccent(this.value)" />
+      <input type="color" id="accentPicker" value="#00f2fe" onchange="updateAccent(this.value)" />
     </div>
   </div>
 </div>
@@ -499,6 +500,43 @@
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // Initialize App Settings & Load Saved Preferences
+  window.addEventListener('DOMContentLoaded', () => {
+    loadSavedSettings();
+    initLocationAndWeather();
+  });
+
+  function loadSavedSettings() {
+    const savedAccent = localStorage.getItem('kshed_accent');
+    if (savedAccent) {
+      updateAccent(savedAccent, false);
+    }
+
+    const savedTheme = localStorage.getItem('kshed_theme');
+    if (savedTheme) {
+      updateTheme(savedTheme, false);
+    }
+
+    const savedUnit = localStorage.getItem('kshed_unit');
+    if (savedUnit !== null) {
+      isCelsius = savedUnit === 'celsius';
+      document.getElementById('unitF').classList.toggle('active', !isCelsius);
+      document.getElementById('unitC').classList.toggle('active', isCelsius);
+    }
+  }
+
+  function updateAccent(color, save = true) {
+    document.documentElement.style.setProperty('--accent-color', color);
+    document.getElementById('accentPicker').value = color;
+    if (save) localStorage.setItem('kshed_accent', color);
+  }
+
+  function updateTheme(color, save = true) {
+    document.documentElement.style.setProperty('--bg-color', color);
+    document.getElementById('themeSelect').value = color;
+    if (save) localStorage.setItem('kshed_theme', color);
+  }
+
   function toggleMenu(show) {
     const overlay = document.getElementById('menuOverlay');
     if (show) {
@@ -528,11 +566,54 @@
   function setUnit(useCelsius) {
     if (isCelsius === useCelsius) return;
     isCelsius = useCelsius;
+    localStorage.setItem('kshed_unit', isCelsius ? 'celsius' : 'fahrenheit');
     
     document.getElementById('unitF').classList.toggle('active', !isCelsius);
     document.getElementById('unitC').classList.toggle('active', isCelsius);
     
     getWeatherData(currentLat, currentLon, currentCityName);
+  }
+
+  async function initLocationAndWeather() {
+    showStatus('Locating device position...');
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          currentLat = position.coords.latitude;
+          currentLon = position.coords.longitude;
+          currentCityName = await reverseGeocode(currentLat, currentLon);
+          document.getElementById('cityInput').value = currentCityName;
+          await getWeatherData(currentLat, currentLon, currentCityName);
+        },
+        async (error) => {
+          console.warn("Geolocation permission denied/failed. Falling back to default location.", error);
+          await getWeatherData(currentLat, currentLon, currentCityName);
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      await getWeatherData(currentLat, currentLon, currentCityName);
+    }
+  }
+
+  async function useCurrentLocation() {
+    toggleMenu(false);
+    initLocationAndWeather();
+  }
+
+  async function reverseGeocode(lat, lon) {
+    try {
+      const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+      if (res.ok) {
+        const data = await res.json();
+        const city = data.city || data.locality || data.principalSubdivision || "Current Location";
+        const country = data.countryCode ? `, ${data.countryCode}` : "";
+        return `${city}${country}`;
+      }
+    } catch (e) {
+      console.warn("Reverse geocode failed", e);
+    }
+    return "Your Location";
   }
 
   async function executeSearch() {
@@ -586,8 +667,8 @@
     const speedLabel = isCelsius ? 'km/h' : 'mph';
 
     try {
-      // Enhanced API request with sunset, sunrise, precipitation probabilities and sums
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&wind_speed_unit=${speedUnit}&timezone=auto`;
+      // 7-day forecast request
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset&forecast_days=7&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&wind_speed_unit=${speedUnit}&timezone=auto`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('Weather forecast unavailable');
@@ -601,9 +682,7 @@
       const humidityVal = data.current.relative_humidity_2m ?? '--';
       const windSpeedVal = data.current.wind_speed_10m ? Math.round(data.current.wind_speed_10m) : '--';
       
-      // Calculate today's exact accumulated rainfall total
       const rainToday = (data.daily && data.daily.precipitation_sum) ? data.daily.precipitation_sum[0] : (data.current.precipitation ?? 0);
-      const rainProbToday = (data.daily && data.daily.precipitation_probability_max) ? data.daily.precipitation_probability_max[0] : 0;
 
       document.getElementById('currentTemp').innerText = `${tempVal}°`;
       document.getElementById('feelsLike').innerText = `${feelsVal}°`;
@@ -642,11 +721,8 @@
 
     const now = new Date();
     let nextRainFound = false;
-
-    // Collect upcoming 24h items plus Sunrise/Sunset events
     let hourlyItems = [];
 
-    // Extract sunrise and sunset times
     let sunEvents = [];
     if (dailyData && dailyData.sunrise && dailyData.sunset) {
       dailyData.sunrise.forEach(str => {
@@ -693,7 +769,6 @@
       });
     }
 
-    // Merge Sun Events chronologically
     sunEvents.forEach(sun => {
       const formattedSunTime = sun.time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
       hourlyItems.push({
@@ -707,7 +782,6 @@
 
     hourlyItems.sort((a, b) => a.time - b.time);
 
-    // Render sorted list
     hourlyItems.forEach(item => {
       if (item.isSunEvent) {
         hourlyContainer.innerHTML += `
@@ -833,7 +907,8 @@
     forecastContainer.innerHTML = '';
 
     if (dailyData && dailyData.time) {
-      const daysToLoop = Math.min(5, dailyData.time.length);
+      // Extended to 7 Days forecast
+      const daysToLoop = Math.min(7, dailyData.time.length);
       
       for (let i = 0; i < daysToLoop; i++) {
         let dayLabel = 'Today';
@@ -902,61 +977,61 @@
 
       if (!frames.length) return;
 
-      // Filter frames based on selected time window (1h, 2h, or 12h)
       const now = Math.floor(Date.now() / 1000);
       const windowSeconds = activeRadarWindowHours * 3600;
       frames = frames.filter(f => (now - f.time) <= windowSeconds);
 
-      // Clear existing radar tile layers
       radarLayers.forEach(layer => map.removeLayer(layer));
       radarLayers = [];
       radarTimestamps = [];
 
-      // Create radar tile layer for each timestamp frame
       frames.forEach((frame) => {
         const layer = L.tileLayer(`${host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
-          tileSize: 256,
           opacity: 0,
-          zIndex: 10
+          transparent: true,
+          zIndex: 100
         });
+        layer.addTo(map);
         radarLayers.push(layer);
         radarTimestamps.push(frame.time);
       });
 
-      // Add all layers to map
-      radarLayers.forEach(l => l.addTo(map));
-
-      // Setup Slider
       const slider = document.getElementById('radarSlider');
       slider.max = radarLayers.length - 1;
-      
-      // Display current frame
       showRadarFrame(radarLayers.length - 1);
-    } catch (err) {
-      console.warn("Could not load radar imagery:", err);
+
+    } catch (e) {
+      console.warn("Radar map loading failed", e);
     }
+  }
+
+  function setRadarWindow(hours) {
+    activeRadarWindowHours = hours;
+    document.querySelectorAll('.radar-time-btn').forEach(btn => btn.classList.remove('active'));
+    if (hours === 1) document.getElementById('rTime1h').classList.add('active');
+    if (hours === 2) document.getElementById('rTime2h').classList.add('active');
+    if (hours === 12) document.getElementById('rTime12h').classList.add('active');
+    updateRadarMap(currentLat, currentLon);
   }
 
   function showRadarFrame(index) {
     if (!radarLayers.length) return;
-    
-    // Hide all layers
     radarLayers.forEach((layer, i) => {
-      layer.setOpacity(i === index ? 0.75 : 0);
+      layer.setOpacity(i === parseInt(index) ? 0.75 : 0);
     });
+    currentRadarIndex = parseInt(index);
+    document.getElementById('radarSlider').value = currentRadarIndex;
 
-    currentRadarIndex = index;
-    document.getElementById('radarSlider').value = index;
-
-    if (radarTimestamps[index]) {
-      const d = new Date(radarTimestamps[index] * 1000);
-      document.getElementById('radarTimeDisplay').innerText = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const timestamp = radarTimestamps[currentRadarIndex];
+    if (timestamp) {
+      const date = new Date(timestamp * 1000);
+      document.getElementById('radarTimeDisplay').innerText = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     }
   }
 
   function onRadarSliderChange(val) {
     stopRadarPlay();
-    showRadarFrame(parseInt(val, 10));
+    showRadarFrame(val);
   }
 
   function toggleRadarPlay() {
@@ -965,8 +1040,9 @@
     } else {
       document.getElementById('radarPlayBtn').innerText = '⏸ PAUSE';
       radarTimer = setInterval(() => {
-        let nextIndex = (currentRadarIndex + 1) % radarLayers.length;
-        showRadarFrame(nextIndex);
+        let next = currentRadarIndex + 1;
+        if (next >= radarLayers.length) next = 0;
+        showRadarFrame(next);
       }, 700);
     }
   }
@@ -978,28 +1054,6 @@
       document.getElementById('radarPlayBtn').innerText = '▶ PLAY';
     }
   }
-
-  function setRadarWindow(hours) {
-    activeRadarWindowHours = hours;
-    document.getElementById('rTime1h').classList.toggle('active', hours === 1);
-    document.getElementById('rTime2h').classList.toggle('active', hours === 2);
-    document.getElementById('rTime12h').classList.toggle('active', hours === 12);
-    
-    stopRadarPlay();
-    updateRadarMap(currentLat, currentLon);
-  }
-
-  function updateTheme(color) {
-    document.documentElement.style.setProperty('--bg-color', color);
-  }
-  function updateAccent(color) {
-    document.documentElement.style.setProperty('--accent-color', color);
-  }
-
-  window.addEventListener('DOMContentLoaded', () => {
-    getWeatherData(currentLat, currentLon, currentCityName);
-  });
 </script>
-
 </body>
 </html>
