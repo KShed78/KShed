@@ -359,9 +359,9 @@
       <div class="card-sub" id="feelsLikeSub">--% | -- km/h</div>
     </div>
     <div class="card">
-      <div class="card-title">RAINFALL TODAY</div>
+      <div class="card-title">PRECIPITATION TODAY</div>
       <div class="card-value" id="rainTotal">--</div>
-      <div class="card-sub" id="nextRain">Checking rain data...</div>
+      <div class="card-sub" id="nextRain">Checking precipitation data...</div>
     </div>
   </div>
 
@@ -667,8 +667,8 @@
     const speedLabel = isCelsius ? 'km/h' : 'mph';
 
     try {
-      // 7-day forecast request
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset&forecast_days=7&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&wind_speed_unit=${speedUnit}&timezone=auto`;
+      // 7-day forecast request including explicit precipitation components
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,rain,snowfall,weather_code&hourly=temperature_2m,precipitation,rain,snowfall,precipitation_probability,weather_code,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,rain_sum,snowfall_sum,precipitation_probability_max,sunrise,sunset&forecast_days=7&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&wind_speed_unit=${speedUnit}&timezone=auto`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('Weather forecast unavailable');
@@ -682,12 +682,12 @@
       const humidityVal = data.current.relative_humidity_2m ?? '--';
       const windSpeedVal = data.current.wind_speed_10m ? Math.round(data.current.wind_speed_10m) : '--';
       
-      const rainToday = (data.daily && data.daily.precipitation_sum) ? data.daily.precipitation_sum[0] : (data.current.precipitation ?? 0);
+      const precipToday = (data.daily && data.daily.precipitation_sum) ? data.daily.precipitation_sum[0] : (data.current.precipitation ?? 0);
 
       document.getElementById('currentTemp').innerText = `${tempVal}°`;
       document.getElementById('feelsLike').innerText = `${feelsVal}°`;
       document.getElementById('feelsLikeSub').innerText = `💧 ${humidityVal}% | 🌬️ ${windSpeedVal} ${speedLabel}`;
-      document.getElementById('rainTotal').innerText = `${rainToday} ${precipUnit}`;
+      document.getElementById('rainTotal').innerText = `${precipToday} ${precipUnit}`;
 
       const code = data.current.weather_code ?? 0;
       const codeInfo = weatherCodes[code] || { text: "Cloudy", icon: "☁️" };
@@ -720,7 +720,7 @@
     }
 
     const now = new Date();
-    let nextRainFound = false;
+    let nextPrecipFound = false;
     let hourlyItems = [];
 
     let sunEvents = [];
@@ -751,13 +751,15 @@
       const hourlyCode = hourlyData.weather_code ? hourlyData.weather_code[i] : 0;
       const icon = (weatherCodes[hourlyCode] || { icon: "☁️" }).icon;
       const temp = Math.round(hourlyData.temperature_2m[i]);
-      const rainVol = hourlyData.precipitation ? hourlyData.precipitation[i] : 0;
-      const rainProb = hourlyData.precipitation_probability ? hourlyData.precipitation_probability[i] : 0;
+      const precipVol = hourlyData.precipitation ? hourlyData.precipitation[i] : 0;
+      const snowVol = hourlyData.snowfall ? hourlyData.snowfall[i] : 0;
+      const precipProb = hourlyData.precipitation_probability ? hourlyData.precipitation_probability[i] : 0;
 
-      if (!nextRainFound && rainVol > 0) {
-        nextRainFound = true;
+      if (!nextPrecipFound && precipVol > 0) {
+        nextPrecipFound = true;
         const dayLabel = itemTime.getDate() === now.getDate() ? 'Today' : 'Tomorrow';
-        document.getElementById('nextRain').innerText = `Next: ${dayLabel} @ ${timeFormatted} (${rainVol} ${precipUnit} | ${rainProb}%)`;
+        const precipTypeLabel = snowVol > 0 ? 'Snow' : 'Precip';
+        document.getElementById('nextRain').innerText = `Next ${precipTypeLabel}: ${dayLabel} @ ${timeFormatted} (${precipVol} ${precipUnit} | ${precipProb}%)`;
       }
 
       hourlyItems.push({
@@ -802,9 +804,9 @@
       }
     });
 
-    if (!nextRainFound) {
+    if (!nextPrecipFound) {
       const maxProbToday = (dailyData && dailyData.precipitation_probability_max) ? dailyData.precipitation_probability_max[0] : 0;
-      document.getElementById('nextRain').innerText = maxProbToday > 0 ? `Max rain chance today: ${maxProbToday}%` : 'No rain expected next 24h';
+      document.getElementById('nextRain').innerText = maxProbToday > 0 ? `Max precip chance today: ${maxProbToday}%` : 'No precipitation expected next 24h';
     }
   }
 
@@ -907,7 +909,6 @@
     forecastContainer.innerHTML = '';
 
     if (dailyData && dailyData.time) {
-      // Extended to 7 Days forecast
       const daysToLoop = Math.min(7, dailyData.time.length);
       
       for (let i = 0; i < daysToLoop; i++) {
@@ -918,77 +919,65 @@
           const year = parseInt(dateParts[0], 10);
           const month = parseInt(dateParts[1], 10) - 1;
           const day = parseInt(dateParts[2], 10);
-          
           const d = new Date(year, month, day);
-          dayLabel = dayNames[d.getDay()] || 'Day';
+          dayLabel = dayNames[d.getDay()];
         }
 
-        const dayCode = dailyData.weather_code ? dailyData.weather_code[i] : 0;
-        const dayInfo = weatherCodes[dayCode] || { icon: "☁️" };
-        
-        const rain = dailyData.precipitation_sum ? dailyData.precipitation_sum[i] : 0;
-        const min = Math.round(dailyData.temperature_2m_min ? dailyData.temperature_2m_min[i] : 0);
-        const max = Math.round(dailyData.temperature_2m_max ? dailyData.temperature_2m_max[i] : 0);
+        const code = dailyData.weather_code ? dailyData.weather_code[i] : 0;
+        const icon = (weatherCodes[code] || { icon: "☁️" }).icon;
+        const maxTemp = Math.round(dailyData.temperature_2m_max[i]);
+        const minTemp = Math.round(dailyData.temperature_2m_min[i]);
+        const precipSum = dailyData.precipitation_sum ? dailyData.precipitation_sum[i] : 0;
 
         forecastContainer.innerHTML += `
           <div class="forecast-item">
             <span class="day">${dayLabel}</span>
-            <span>${dayInfo.icon}</span>
-            <span class="rain-vol">💧 ${rain} ${precipUnit}</span>
-            <span>${min}°</span>
-            <strong>${max}°</strong>
+            <span style="font-size: 20px;">${icon}</span>
+            <span class="rain-vol">${precipSum > 0 ? `${precipSum} ${precipUnit}` : '--'}</span>
+            <span style="font-weight: 600;">${maxTemp}° / <span style="color:#a0aec0;">${minTemp}°</span></span>
           </div>
         `;
       }
-    } else {
-      forecastContainer.innerHTML = '<div style="font-size:13px; color:#a0aec0;">No forecast available.</div>';
     }
   }
 
-  /* --- SATELLITE & WEATHER RADAR FUNCTIONS --- */
-  function initRadarMap() {
-    if (map) return;
+  // Weather Radar Initialization with Leaflet & RainViewer
+  function updateRadarMap(lat, lon) {
+    if (!map) {
+      map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 8);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 18
+      }).addTo(map);
 
-    map = L.map('map', {
-      zoomControl: true,
-      attributionControl: false
-    }).setView([currentLat, currentLon], 7);
+      cityMarker = L.marker([lat, lon]).addTo(map);
+    } else {
+      map.setView([lat, lon], 8);
+      cityMarker.setLatLng([lat, lon]);
+    }
 
-    // Dark Map Base Layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 12,
-      subdomains: 'abcd'
-    }).addTo(map);
-
-    cityMarker = L.marker([currentLat, currentLon]).addTo(map);
+    loadRadarLayers();
   }
 
-  async function updateRadarMap(lat, lon) {
-    initRadarMap();
-    map.setView([lat, lon], 7);
-    if (cityMarker) cityMarker.setLatLng([lat, lon]);
-
+  async function loadRadarLayers() {
     try {
       const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+      if (!res.ok) return;
+
       const data = await res.json();
-      
-      const host = data.host;
-      let frames = data.radar ? (data.radar.past || []).concat(data.radar.nowcast || []) : [];
+      if (!data || !data.radar || !data.radar.past) return;
 
-      if (!frames.length) return;
-
-      const now = Math.floor(Date.now() / 1000);
-      const windowSeconds = activeRadarWindowHours * 3600;
-      frames = frames.filter(f => (now - f.time) <= windowSeconds);
-
+      // Clear existing layers
       radarLayers.forEach(layer => map.removeLayer(layer));
       radarLayers = [];
       radarTimestamps = [];
 
-      frames.forEach((frame) => {
-        const layer = L.tileLayer(`${host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+      const pastFrames = data.radar.past;
+      const count = Math.min(pastFrames.length, activeRadarWindowHours * 4);
+      const selectedFrames = pastFrames.slice(pastFrames.length - count);
+
+      selectedFrames.forEach((frame) => {
+        const layer = L.tileLayer(`https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
           opacity: 0,
-          transparent: true,
           zIndex: 100
         });
         layer.addTo(map);
@@ -998,62 +987,61 @@
 
       const slider = document.getElementById('radarSlider');
       slider.max = radarLayers.length - 1;
-      showRadarFrame(radarLayers.length - 1);
+      slider.value = radarLayers.length - 1;
 
+      showRadarFrame(radarLayers.length - 1);
     } catch (e) {
-      console.warn("Radar map loading failed", e);
+      console.warn("Unable to fetch radar data", e);
+    }
+  }
+
+  function showRadarFrame(index) {
+    if (radarLayers.length === 0) return;
+
+    radarLayers.forEach((layer, i) => {
+      layer.setOpacity(i === index ? 0.75 : 0);
+    });
+
+    currentRadarIndex = index;
+    document.getElementById('radarSlider').value = index;
+
+    if (radarTimestamps[index]) {
+      const time = new Date(radarTimestamps[index] * 1000);
+      document.getElementById('radarTimeDisplay').innerText = time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+  }
+
+  function onRadarSliderChange(val) {
+    if (radarTimer) toggleRadarPlay();
+    showRadarFrame(parseInt(val, 10));
+  }
+
+  function toggleRadarPlay() {
+    const btn = document.getElementById('radarPlayBtn');
+    if (radarTimer) {
+      clearInterval(radarTimer);
+      radarTimer = null;
+      btn.innerText = "▶ PLAY";
+    } else {
+      btn.innerText = "⏸ PAUSE";
+      radarTimer = setInterval(() => {
+        let nextIndex = currentRadarIndex + 1;
+        if (nextIndex >= radarLayers.length) nextIndex = 0;
+        showRadarFrame(nextIndex);
+      }, 600);
     }
   }
 
   function setRadarWindow(hours) {
     activeRadarWindowHours = hours;
-    document.querySelectorAll('.radar-time-btn').forEach(btn => btn.classList.remove('active'));
-    if (hours === 1) document.getElementById('rTime1h').classList.add('active');
-    if (hours === 2) document.getElementById('rTime2h').classList.add('active');
-    if (hours === 12) document.getElementById('rTime12h').classList.add('active');
-    updateRadarMap(currentLat, currentLon);
-  }
+    document.getElementById('rTime1h').classList.toggle('active', hours === 1);
+    document.getElementById('rTime2h').classList.toggle('active', hours === 2);
+    document.getElementById('rTime12h').classList.toggle('active', hours === 12);
 
-  function showRadarFrame(index) {
-    if (!radarLayers.length) return;
-    radarLayers.forEach((layer, i) => {
-      layer.setOpacity(i === parseInt(index) ? 0.75 : 0);
-    });
-    currentRadarIndex = parseInt(index);
-    document.getElementById('radarSlider').value = currentRadarIndex;
-
-    const timestamp = radarTimestamps[currentRadarIndex];
-    if (timestamp) {
-      const date = new Date(timestamp * 1000);
-      document.getElementById('radarTimeDisplay').innerText = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    }
-  }
-
-  function onRadarSliderChange(val) {
-    stopRadarPlay();
-    showRadarFrame(val);
-  }
-
-  function toggleRadarPlay() {
-    if (radarTimer) {
-      stopRadarPlay();
-    } else {
-      document.getElementById('radarPlayBtn').innerText = '⏸ PAUSE';
-      radarTimer = setInterval(() => {
-        let next = currentRadarIndex + 1;
-        if (next >= radarLayers.length) next = 0;
-        showRadarFrame(next);
-      }, 700);
-    }
-  }
-
-  function stopRadarPlay() {
-    if (radarTimer) {
-      clearInterval(radarTimer);
-      radarTimer = null;
-      document.getElementById('radarPlayBtn').innerText = '▶ PLAY';
-    }
+    if (radarTimer) toggleRadarPlay();
+    loadRadarLayers();
   }
 </script>
+
 </body>
 </html>
