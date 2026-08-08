@@ -365,7 +365,7 @@
     </div>
   </div>
 
-  <!-- Hourly Forecast (With Sunset & Sunrise) -->
+  <!-- Hourly Forecast -->
   <div class="card">
     <div class="card-title" style="margin-bottom: 12px; color: var(--accent-color);">HOURLY FORECAST & SUNSET</div>
     <div class="hourly-scroll" id="hourlyList">Loading hourly data...</div>
@@ -411,7 +411,7 @@
 
 </div>
 
-<!-- Modal Settings Drawer Hidden Behind Hamburger Icon -->
+<!-- Modal Settings Drawer -->
 <div class="menu-overlay" id="menuOverlay" onclick="handleOverlayClick(event)">
   <div class="settings-modal">
     <div class="modal-header">
@@ -465,14 +465,16 @@
   let currentLon = -113.4938;
   let currentCityName = "Edmonton, CA";
 
-  // Radar Map Variables
   let map = null;
   let cityMarker = null;
-  let radarLayers = [];
-  let radarTimestamps = [];
-  let currentRadarIndex = 0;
-  let radarTimer = null;
-  let activeRadarWindowHours = 2;
+
+  // Radar Animation State Variables
+  let radarFrames = [];
+  let radarLayers = {};
+  let currentFrameIndex = 0;
+  let radarAnimationTimer = null;
+  let isRadarPlaying = false;
+  let currentRadarHours = 2;
 
   const weatherCodes = {
     0: { text: "Clear Sky", icon: "☀️" },
@@ -500,7 +502,6 @@
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  // Initialize App Settings & Load Saved Preferences
   window.addEventListener('DOMContentLoaded', () => {
     loadSavedSettings();
     initLocationAndWeather();
@@ -508,14 +509,10 @@
 
   function loadSavedSettings() {
     const savedAccent = localStorage.getItem('kshed_accent');
-    if (savedAccent) {
-      updateAccent(savedAccent, false);
-    }
+    if (savedAccent) updateAccent(savedAccent, false);
 
     const savedTheme = localStorage.getItem('kshed_theme');
-    if (savedTheme) {
-      updateTheme(savedTheme, false);
-    }
+    if (savedTheme) updateTheme(savedTheme, false);
 
     const savedUnit = localStorage.getItem('kshed_unit');
     if (savedUnit !== null) {
@@ -539,17 +536,11 @@
 
   function toggleMenu(show) {
     const overlay = document.getElementById('menuOverlay');
-    if (show) {
-      overlay.classList.add('active');
-    } else {
-      overlay.classList.remove('active');
-    }
+    overlay.classList.toggle('active', show);
   }
 
   function handleOverlayClick(event) {
-    if (event.target.id === 'menuOverlay') {
-      toggleMenu(false);
-    }
+    if (event.target.id === 'menuOverlay') toggleMenu(false);
   }
 
   function showStatus(text, isError = false) {
@@ -586,7 +577,7 @@
           await getWeatherData(currentLat, currentLon, currentCityName);
         },
         async (error) => {
-          console.warn("Geolocation permission denied/failed. Falling back to default location.", error);
+          console.warn("Geolocation permission denied. Falling back to default.", error);
           await getWeatherData(currentLat, currentLon, currentCityName);
         },
         { timeout: 8000 }
@@ -646,8 +637,11 @@
       }
 
       const location = geoData.results[0];
-      currentLat = location.latitude;
-      currentLon = location.longitude;
+      
+      if (typeof location.latitude === 'number' && typeof location.longitude === 'number') {
+        currentLat = location.latitude;
+        currentLon = location.longitude;
+      }
       
       const countryStr = location.country_code ? location.country_code.toUpperCase() : (location.country || '');
       currentCityName = countryStr ? `${location.name}, ${countryStr}` : location.name;
@@ -655,55 +649,75 @@
       await getWeatherData(currentLat, currentLon, currentCityName);
     } catch (err) {
       console.error(err);
-      showStatus('Unable to reach weather servers. Check internet connection.', true);
+      showStatus('Unable to reach weather servers. Check connection.', true);
     }
   }
 
   async function getWeatherData(lat, lon, name) {
     showStatus('Updating weather data...');
+
+    if (lat == null || lon == null || isNaN(Number(lat)) || isNaN(Number(lon))) {
+      lat = 53.5461;
+      lon = -113.4938;
+      name = name || "Edmonton, CA";
+    }
+
     const unitParam = isCelsius ? 'celsius' : 'fahrenheit';
     const precipUnit = isCelsius ? 'mm' : 'inch';
     const speedUnit = isCelsius ? 'kmh' : 'mph';
     const speedLabel = isCelsius ? 'km/h' : 'mph';
 
     try {
-      // 7-day forecast request including explicit precipitation components
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,rain,snowfall,weather_code&hourly=temperature_2m,precipitation,rain,snowfall,precipitation_probability,weather_code,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,rain_sum,snowfall_sum,precipitation_probability_max,sunrise,sunset&forecast_days=7&temperature_unit=${unitParam}&precipitation_unit=${precipUnit}&wind_speed_unit=${speedUnit}&timezone=auto`;
+      const params = new URLSearchParams({
+        latitude: lat.toString(),
+        longitude: lon.toString(),
+        current: 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,rain,snowfall,weather_code',
+        hourly: 'temperature_2m,precipitation,rain,snowfall,precipitation_probability,weather_code,wind_gusts_10m',
+        daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,rain_sum,snowfall_sum,precipitation_probability_max,sunrise,sunset',
+        forecast_days: '7',
+        temperature_unit: unitParam,
+        precipitation_unit: precipUnit,
+        wind_speed_unit: speedUnit,
+        timezone: 'auto'
+      });
+
+      const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
 
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Weather forecast unavailable');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.reason || `Weather forecast server responded with HTTP ${res.status}`);
+      }
       
       const data = await res.json();
 
       document.getElementById('cityName').innerText = name;
       
-      const tempVal = Math.round(data.current.temperature_2m ?? 0);
-      const feelsVal = Math.round(data.current.apparent_temperature ?? tempVal);
-      const humidityVal = data.current.relative_humidity_2m ?? '--';
-      const windSpeedVal = data.current.wind_speed_10m ? Math.round(data.current.wind_speed_10m) : '--';
+      const tempVal = Math.round(data.current?.temperature_2m ?? 0);
+      const feelsVal = Math.round(data.current?.apparent_temperature ?? tempVal);
+      const humidityVal = data.current?.relative_humidity_2m ?? '--';
+      const windSpeedVal = data.current?.wind_speed_10m ? Math.round(data.current.wind_speed_10m) : '--';
       
-      const precipToday = (data.daily && data.daily.precipitation_sum) ? data.daily.precipitation_sum[0] : (data.current.precipitation ?? 0);
+      const precipToday = (data.daily && data.daily.precipitation_sum) ? data.daily.precipitation_sum[0] : (data.current?.precipitation ?? 0);
 
       document.getElementById('currentTemp').innerText = `${tempVal}°`;
       document.getElementById('feelsLike').innerText = `${feelsVal}°`;
       document.getElementById('feelsLikeSub').innerText = `💧 ${humidityVal}% | 🌬️ ${windSpeedVal} ${speedLabel}`;
       document.getElementById('rainTotal').innerText = `${precipToday} ${precipUnit}`;
 
-      const code = data.current.weather_code ?? 0;
+      const code = data.current?.weather_code ?? 0;
       const codeInfo = weatherCodes[code] || { text: "Cloudy", icon: "☁️" };
       document.getElementById('currentCondition').innerText = `${codeInfo.icon} ${codeInfo.text}`;
 
-      renderHourlyAndRain(data, precipUnit);
-      await checkWeatherAlerts(data, lat, lon, name);
-      renderDailyForecast(data.daily, precipUnit);
-
-      // Update Radar Map center and tiles
-      updateRadarMap(lat, lon);
+      try { renderHourlyAndRain(data, precipUnit); } catch (e) { console.error("Error rendering hourly:", e); }
+      try { checkWeatherAlerts(data, lat, lon, name); } catch (e) { console.error("Error checking alerts:", e); }
+      try { renderDailyForecast(data.daily, precipUnit); } catch (e) { console.error("Error rendering daily:", e); }
+      try { initOrUpdateRadarMap(lat, lon); } catch (e) { console.error("Error updating map:", e); }
 
       hideStatus();
     } catch (err) {
-      console.error(err);
-      showStatus('Error loading forecast data. Please try again.', true);
+      console.error('Error fetching weather:', err);
+      showStatus(`Error loading forecast data: ${err.message}`, true);
     }
   }
 
@@ -810,39 +824,13 @@
     }
   }
 
-  async function checkWeatherAlerts(data, lat, lon, locationName) {
+  function checkWeatherAlerts(data, lat, lon, locationName) {
     const alertBox = document.getElementById('alertBox');
     const alertTitle = document.getElementById('alertTitle');
     const alertTimes = document.getElementById('alertTimes');
     const alertIssued = document.getElementById('alertIssued');
     const alertEnds = document.getElementById('alertEnds');
     const alertDesc = document.getElementById('alertDesc');
-
-    try {
-      const alertApi = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&warnings=true&timezone=auto`;
-      const res = await fetch(alertApi);
-      if (res.ok) {
-        const warnData = await res.json();
-        if (warnData.warnings && warnData.warnings.length > 0) {
-          const activeWarn = warnData.warnings[0];
-          alertBox.className = "alert-card";
-          alertTitle.innerHTML = `⚠️ ${activeWarn.event.toUpperCase()}`;
-          
-          if (activeWarn.start && activeWarn.end) {
-            alertIssued.innerText = formatTimeLabel(new Date(activeWarn.start), new Date());
-            alertEnds.innerText = formatTimeLabel(new Date(activeWarn.end), new Date());
-            alertTimes.style.display = 'flex';
-          } else {
-            alertTimes.style.display = 'none';
-          }
-          
-          alertDesc.innerText = activeWarn.description || `Official weather alert issued for ${locationName} and surrounding area.`;
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn("Direct warnings check passed, falling back to real-time analysis.");
-    }
 
     const severeCodes = [80, 81, 82, 95, 96, 99];
     const hourly = data.hourly;
@@ -859,7 +847,7 @@
         const hoursFromNow = (itemTime - now) / (1000 * 60 * 60);
 
         if (hoursFromNow >= -1 && hoursFromNow <= 3) {
-          const code = hourly.weather_code[i];
+          const code = hourly.weather_code ? hourly.weather_code[i] : 0;
           const precip = hourly.precipitation ? hourly.precipitation[i] : 0;
 
           if (severeCodes.includes(code) || precip > 3.0) {
@@ -888,7 +876,7 @@
       alertEnds.innerText = formatTimeLabel(endTime, now);
       alertTimes.style.display = 'flex';
 
-      alertDesc.innerText = `Active weather advisory in effect for ${locationName}. Heavy precipitation, lightning, hail, or strong winds are actively impacting your area.`;
+      alertDesc.innerText = `Active weather advisory in effect for ${locationName}. Heavy precipitation, lightning, hail, or strong winds are impacting your area.`;
     } else {
       alertBox.className = "alert-card clear";
       alertTitle.innerHTML = "🛡️ NO ACTIVE SEVERE WEATHER ALERTS";
@@ -912,17 +900,9 @@
       const daysToLoop = Math.min(7, dailyData.time.length);
       
       for (let i = 0; i < daysToLoop; i++) {
-        let dayLabel = 'Today';
-        
-        if (i > 0) {
-          const dateParts = dailyData.time[i].split('-');
-          const year = parseInt(dateParts[0], 10);
-          const month = parseInt(dateParts[1], 10) - 1;
-          const day = parseInt(dateParts[2], 10);
-          const d = new Date(year, month, day);
-          dayLabel = dayNames[d.getDay()];
-        }
-
+        const dateStr = dailyData.time[i].includes('T') ? dailyData.time[i] : dailyData.time[i] + 'T00:00:00';
+        const d = new Date(dateStr);
+        const dayLabel = i === 0 ? 'Today' : dayNames[d.getDay()];
         const code = dailyData.weather_code ? dailyData.weather_code[i] : 0;
         const icon = (weatherCodes[code] || { icon: "☁️" }).icon;
         const maxTemp = Math.round(dailyData.temperature_2m_max[i]);
@@ -932,114 +912,158 @@
         forecastContainer.innerHTML += `
           <div class="forecast-item">
             <span class="day">${dayLabel}</span>
-            <span style="font-size: 20px;">${icon}</span>
-            <span class="rain-vol">${precipSum > 0 ? `${precipSum} ${precipUnit}` : '--'}</span>
-            <span style="font-weight: 600;">${maxTemp}° / <span style="color:#a0aec0;">${minTemp}°</span></span>
+            <span style="font-size:18px;">${icon}</span>
+            <span class="rain-vol">${precipSum > 0 ? `🌧️ ${precipSum} ${precipUnit}` : ''}</span>
+            <span><strong>${maxTemp}°</strong> / ${minTemp}°</span>
           </div>
         `;
       }
     }
   }
 
-  // Weather Radar Initialization with Leaflet & RainViewer
-  function updateRadarMap(lat, lon) {
+  /* ---------------- RADAR ENGINE (RAINVIEWER INTEGRATION) ---------------- */
+  function initOrUpdateRadarMap(lat, lon) {
     if (!map) {
-      map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 8);
+      map = L.map('map', { zoomControl: false }).setView([lat, lon], 7);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 18
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
       }).addTo(map);
-
-      cityMarker = L.marker([lat, lon]).addTo(map);
     } else {
-      map.setView([lat, lon], 8);
-      cityMarker.setLatLng([lat, lon]);
+      map.setView([lat, lon], 7);
     }
 
-    loadRadarLayers();
+    if (cityMarker) map.removeLayer(cityMarker);
+    cityMarker = L.circleMarker([lat, lon], {
+      radius: 6,
+      fillColor: "#00f2fe",
+      color: "#ffffff",
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.9
+    }).addTo(map);
+
+    loadRadarData(currentRadarHours);
   }
 
-  async function loadRadarLayers() {
+  async function loadRadarData(hours) {
+    stopRadarAnimation();
+    
+    // Clear existing overlay layers
+    Object.keys(radarLayers).forEach(path => {
+      map.removeLayer(radarLayers[path]);
+    });
+    radarLayers = {};
+
     try {
       const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-      if (!res.ok) return;
-
+      if (!res.ok) throw new Error('Failed to fetch radar frames');
       const data = await res.json();
-      if (!data || !data.radar || !data.radar.past) return;
 
-      // Clear existing layers
-      radarLayers.forEach(layer => map.removeLayer(layer));
-      radarLayers = [];
-      radarTimestamps = [];
+      const allFrames = [...(data.radar?.past || []), ...(data.radar?.nowcast || [])];
+      if (!allFrames || allFrames.length === 0) return;
 
-      const pastFrames = data.radar.past;
-      const count = Math.min(pastFrames.length, activeRadarWindowHours * 4);
-      const selectedFrames = pastFrames.slice(pastFrames.length - count);
+      const now = Math.floor(Date.now() / 1000);
+      const cutoffTime = now - (hours * 3600);
 
-      selectedFrames.forEach((frame) => {
+      radarFrames = allFrames.filter(frame => frame.time >= cutoffTime);
+
+      if (radarFrames.length === 0) {
+        radarFrames = allFrames.slice(-Math.min(hours * 6, allFrames.length));
+      }
+
+      const slider = document.getElementById('radarSlider');
+      slider.min = 0;
+      slider.max = radarFrames.length - 1;
+      slider.value = radarFrames.length - 1;
+
+      // Preload radar layer tiles into Leaflet
+      radarFrames.forEach(frame => {
         const layer = L.tileLayer(`https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+          tileSize: 256,
           opacity: 0,
           zIndex: 100
         });
         layer.addTo(map);
-        radarLayers.push(layer);
-        radarTimestamps.push(frame.time);
+        radarLayers[frame.path] = layer;
       });
 
-      const slider = document.getElementById('radarSlider');
-      slider.max = radarLayers.length - 1;
-      slider.value = radarLayers.length - 1;
-
-      showRadarFrame(radarLayers.length - 1);
+      showRadarFrame(radarFrames.length - 1);
+      startRadarAnimation();
     } catch (e) {
-      console.warn("Unable to fetch radar data", e);
+      console.error("Radar tiles failed to load:", e);
+      document.getElementById('radarTimeDisplay').innerText = "Radar Offline";
     }
   }
 
   function showRadarFrame(index) {
-    if (radarLayers.length === 0) return;
+    if (!radarFrames || radarFrames.length === 0) return;
+    
+    currentFrameIndex = index;
+    const currentFrame = radarFrames[index];
 
-    radarLayers.forEach((layer, i) => {
-      layer.setOpacity(i === index ? 0.75 : 0);
+    Object.keys(radarLayers).forEach(path => {
+      if (path === currentFrame.path) {
+        radarLayers[path].setOpacity(0.75);
+      } else {
+        radarLayers[path].setOpacity(0);
+      }
     });
 
-    currentRadarIndex = index;
     document.getElementById('radarSlider').value = index;
 
-    if (radarTimestamps[index]) {
-      const time = new Date(radarTimestamps[index] * 1000);
-      document.getElementById('radarTimeDisplay').innerText = time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const frameDate = new Date(currentFrame.time * 1000);
+    const hrs = frameDate.getHours();
+    const mins = frameDate.getMinutes().toString().padStart(2, '0');
+    const ampm = hrs >= 12 ? 'PM' : 'AM';
+    const formattedHours = hrs % 12 || 12;
+    
+    document.getElementById('radarTimeDisplay').innerText = `${formattedHours}:${mins} ${ampm}`;
+  }
+
+  function startRadarAnimation() {
+    stopRadarAnimation();
+    isRadarPlaying = true;
+    document.getElementById('radarPlayBtn').innerText = "⏸ PAUSE";
+
+    radarAnimationTimer = setInterval(() => {
+      let nextIndex = currentFrameIndex + 1;
+      if (nextIndex >= radarFrames.length) nextIndex = 0;
+      showRadarFrame(nextIndex);
+    }, 600);
+  }
+
+  function stopRadarAnimation() {
+    isRadarPlaying = false;
+    document.getElementById('radarPlayBtn').innerText = "▶ PLAY";
+    if (radarAnimationTimer) {
+      clearInterval(radarAnimationTimer);
+      radarAnimationTimer = null;
+    }
+  }
+
+  function toggleRadarPlay() {
+    if (isRadarPlaying) {
+      stopRadarAnimation();
+    } else {
+      startRadarAnimation();
     }
   }
 
   function onRadarSliderChange(val) {
-    if (radarTimer) toggleRadarPlay();
+    stopRadarAnimation();
     showRadarFrame(parseInt(val, 10));
   }
 
-  function toggleRadarPlay() {
-    const btn = document.getElementById('radarPlayBtn');
-    if (radarTimer) {
-      clearInterval(radarTimer);
-      radarTimer = null;
-      btn.innerText = "▶ PLAY";
-    } else {
-      btn.innerText = "⏸ PAUSE";
-      radarTimer = setInterval(() => {
-        let nextIndex = currentRadarIndex + 1;
-        if (nextIndex >= radarLayers.length) nextIndex = 0;
-        showRadarFrame(nextIndex);
-      }, 600);
-    }
-  }
-
   function setRadarWindow(hours) {
-    activeRadarWindowHours = hours;
-    document.getElementById('rTime1h').classList.toggle('active', hours === 1);
-    document.getElementById('rTime2h').classList.toggle('active', hours === 2);
-    document.getElementById('rTime12h').classList.toggle('active', hours === 12);
-
-    if (radarTimer) toggleRadarPlay();
-    loadRadarLayers();
+    currentRadarHours = hours;
+    ['1h', '2h', '12h'].forEach(h => {
+      const btn = document.getElementById(`rTime${h}`);
+      if (btn) btn.classList.remove('active');
+    });
+    document.getElementById(`rTime${hours}h`).classList.add('active');
+    loadRadarData(hours);
   }
 </script>
 
