@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- PeerJS for WebRTC real-time phone connections -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
@@ -37,6 +36,15 @@
             background: rgba(51, 65, 85, 0.85);
             border-color: rgba(99, 102, 241, 0.5);
         }
+        .category-card {
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .category-card.selected {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+        }
         .timer-ring {
             transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
         }
@@ -48,13 +56,13 @@
     <header class="max-w-4xl w-full mx-auto flex justify-between items-center mb-6">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-500/30">
-                <i class="fas fa-users text-white"></i>
+                <i class="fas fa-brain text-white"></i>
             </div>
             <div>
                 <h1 class="font-black text-xl md:text-2xl tracking-tight bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
                     OMNI TRIVIA PARTY
                 </h1>
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Phone Controller Edition</p>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Trivial Pursuit Edition</p>
             </div>
         </div>
 
@@ -121,16 +129,48 @@
             </div>
         </div>
 
-        <!-- Host Lobby Screen -->
-        <div id="hostLobbyScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-8 text-center">
-            <div class="space-y-2">
+        <!-- Host Lobby Screen (Category Selection + Players) -->
+        <div id="hostLobbyScreen" class="hidden glass rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 text-center">
+            <div class="space-y-1">
                 <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Join on your phone using code</p>
-                <div id="lobbyRoomCode" class="text-5xl font-mono font-black text-indigo-400 tracking-widest py-2">----</div>
+                <div id="lobbyRoomCode" class="text-5xl font-mono font-black text-indigo-400 tracking-widest">----</div>
             </div>
 
-            <div>
-                <h3 class="text-sm font-bold text-slate-400 mb-4">Connected Players (<span id="playerCount">0</span>)</h3>
-                <div id="playerList" class="flex flex-wrap justify-center gap-3 min-h-[100px] p-4 bg-slate-900/40 rounded-2xl border border-slate-800">
+            <!-- Trivial Pursuit Category Picker -->
+            <div class="space-y-3 text-left">
+                <label class="text-xs font-black text-slate-300 uppercase tracking-wider block text-center">Select Trivia Category</label>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <button onclick="selectCategory('any', this)" class="category-card selected glass-btn p-3 rounded-xl flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm"><i class="fas fa-layer-group"></i></div>
+                        <span class="text-xs font-bold text-white">All Categories</span>
+                    </button>
+                    <button onclick="selectCategory('17', this)" class="category-card glass-btn p-3 rounded-xl flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm"><i class="fas fa-flask"></i></div>
+                        <span class="text-xs font-bold text-white">Science & Tech</span>
+                    </button>
+                    <button onclick="selectCategory('22', this)" class="category-card glass-btn p-3 rounded-xl flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-sm"><i class="fas fa-globe"></i></div>
+                        <span class="text-xs font-bold text-white">Geography & History</span>
+                    </button>
+                    <button onclick="selectCategory('11', this)" class="category-card glass-btn p-3 rounded-xl flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center text-sm"><i class="fas fa-film"></i></div>
+                        <span class="text-xs font-bold text-white">Pop Culture</span>
+                    </button>
+                    <button onclick="selectCategory('25', this)" class="category-card glass-btn p-3 rounded-xl flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-sm"><i class="fas fa-palette"></i></div>
+                        <span class="text-xs font-bold text-white">Arts & Literature</span>
+                    </button>
+                    <button onclick="selectCategory('21', this)" class="category-card glass-btn p-3 rounded-xl flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center text-sm"><i class="fas fa-football-ball"></i></div>
+                        <span class="text-xs font-bold text-white">Sports & Leisure</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Players Waiting -->
+            <div class="pt-2">
+                <h3 class="text-xs font-bold text-slate-400 mb-2">Connected Players (<span id="playerCount">0</span>)</h3>
+                <div id="playerList" class="flex flex-wrap justify-center gap-2 min-h-[60px] p-3 bg-slate-900/40 rounded-xl border border-slate-800">
                     <p class="text-xs text-slate-500 self-center">Waiting for players to enter code...</p>
                 </div>
             </div>
@@ -143,7 +183,10 @@
         <!-- Host Question Display Screen -->
         <div id="hostGameScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
             <div class="flex justify-between items-center text-xs font-bold text-slate-400 border-b border-slate-700/50 pb-4">
-                <span>Question <span id="currentQNum">1</span>/10</span>
+                <span class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg text-[11px]" id="hostCategoryPill">All Categories</span>
+                    <span>Q <span id="currentQNum">1</span>/10</span>
+                </span>
                 <span id="hostStatusBadge" class="text-indigo-400 uppercase tracking-wider font-extrabold">Live Round</span>
             </div>
 
@@ -241,6 +284,8 @@
         let isHost = false;
         let timerInterval = null;
         let timeLeft = QUESTION_TIME;
+        let selectedCategoryId = 'any';
+        let selectedCategoryName = 'All Categories';
 
         // Game State
         let gameState = {
@@ -251,16 +296,68 @@
             answersReceived: 0
         };
 
-        // Fallback Questions
-        const QUESTIONS = [
-            { question: "Which company created the Java programming language?", options: ["Sun Microsystems", "Microsoft", "Apple", "Google"], correct: 0 },
-            { question: "What is the capital city of Australia?", options: ["Sydney", "Melbourne", "Canberra", "Brisbane"], correct: 2 },
-            { question: "Which movie won Best Picture at the Academy Awards in 2020?", options: ["1917", "Parasite", "Joker", "Ford v Ferrari"], correct: 1 },
-            { question: "Who painted 'Girl with a Pearl Earring'?", options: ["Leonardo da Vinci", "Claude Monet", "Johannes Vermeer", "Vincent van Gogh"], correct: 2 }
-        ];
+        // Local Questions by Category (Fallback)
+        const LOCAL_QUESTIONS = {
+            'any': [
+                { question: "Which company created the Java programming language?", options: ["Sun Microsystems", "Microsoft", "Apple", "Google"], correct: 0 },
+                { question: "What is the capital city of Australia?", options: ["Sydney", "Melbourne", "Canberra", "Brisbane"], correct: 2 },
+                { question: "Which movie won Best Picture at the Oscars in 2020?", options: ["1917", "Parasite", "Joker", "Ford v Ferrari"], correct: 1 },
+                { question: "Who painted 'Girl with a Pearl Earring'?", options: ["da Vinci", "Monet", "Johannes Vermeer", "van Gogh"], correct: 2 }
+            ],
+            '17': [ // Science
+                { question: "Which element has the chemical symbol 'O'?", options: ["Gold", "Oxygen", "Osmium", "Zinc"], correct: 1 },
+                { question: "How many bones are in the adult human body?", options: ["206", "180", "214", "250"], correct: 0 },
+                { question: "What is the hardest natural substance on Earth?", options: ["Quartz", "Granite", "Diamond", "Titanium"], correct: 2 }
+            ],
+            '22': [ // Geography & History
+                { question: "Which country has the longest coastline in the world?", options: ["Russia", "Canada", "Australia", "Indonesia"], correct: 1 },
+                { question: "In which year did World War II end?", options: ["1943", "1944", "1945", "1950"], correct: 2 }
+            ]
+        };
+
+        function selectCategory(id, btnElement) {
+            selectedCategoryId = id;
+            document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+            btnElement.classList.add('selected');
+            selectedCategoryName = btnElement.querySelector('span').innerText;
+        }
 
         function generateRoomCode() {
             return Math.random().toString(36).substring(2, 6).toUpperCase();
+        }
+
+        // Decode HTML entities from API
+        function decodeHTML(html) {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        }
+
+        // Fetch Questions from OpenTDB
+        async function fetchQuestions() {
+            let url = `https://opentdb.com/api.php?amount=10&type=multiple`;
+            if (selectedCategoryId !== 'any') url += `&category=${selectedCategoryId}`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    return data.results.map(item => {
+                        const options = [...item.incorrect_answers.map(decodeHTML)];
+                        const correctIdx = Math.floor(Math.random() * 4);
+                        options.splice(correctIdx, 0, decodeHTML(item.correct_answer));
+                        return {
+                            question: decodeHTML(item.question),
+                            options: options,
+                            correct: correctIdx
+                        };
+                    });
+                }
+            } catch (e) {
+                console.warn("API fetch failed, using local questions:", e);
+            }
+
+            return LOCAL_QUESTIONS[selectedCategoryId] || LOCAL_QUESTIONS['any'];
         }
 
         // ================= HOST LOGIC =================
@@ -296,7 +393,6 @@
                     gameState.answersReceived++;
                     document.getElementById('answeredCount').innerText = gameState.answersReceived;
 
-                    // If all players submitted early, stop the timer immediately
                     if (gameState.answersReceived >= Object.keys(gameState.players).length) {
                         clearInterval(timerInterval);
                         evaluateAnswers();
@@ -312,7 +408,7 @@
 
             if (pKeys.length > 0) {
                 list.innerHTML = pKeys.map(k => `
-                    <div class="px-4 py-2 bg-indigo-500/20 border border-indigo-500/40 rounded-xl font-bold text-xs text-indigo-300">
+                    <div class="px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/40 rounded-xl font-bold text-xs text-indigo-300">
                         ${gameState.players[k].name}
                     </div>
                 `).join('');
@@ -322,11 +418,15 @@
             }
         }
 
-        function startHostGame() {
-            gameState.questions = QUESTIONS;
+        async function startHostGame() {
+            document.getElementById('startHostBtn').innerText = "Fetching Questions...";
+            gameState.questions = await fetchQuestions();
             gameState.currentIdx = 0;
+
             document.getElementById('hostLobbyScreen').classList.add('hidden');
             document.getElementById('hostGameScreen').classList.remove('hidden');
+            document.getElementById('hostCategoryPill').innerText = selectedCategoryName;
+            
             renderHostQuestion();
         }
 
@@ -334,7 +434,6 @@
             const q = gameState.questions[gameState.currentIdx];
             gameState.answersReceived = 0;
             
-            // Reset player answers
             Object.keys(gameState.players).forEach(k => gameState.players[k].answered = -1);
 
             document.getElementById('resultsPanel').classList.add('hidden');
@@ -352,9 +451,7 @@
                 </div>
             `).join('');
 
-            // Broadcast new question start to phone controllers
             broadcast({ type: 'NEW_QUESTION', index: gameState.currentIdx, duration: QUESTION_TIME });
-
             startTimer();
         }
 
@@ -395,7 +492,6 @@
             const correctList = [];
             const wrongList = [];
 
-            // Highlight Correct Answer on Host Screen
             q.options.forEach((_, i) => {
                 const card = document.getElementById(`optionCard-${i}`);
                 if (i === q.correct) {
@@ -406,12 +502,9 @@
                 }
             });
 
-            // Process Player Answers & Calculate Scores
             Object.keys(gameState.players).forEach(k => {
                 const p = gameState.players[k];
-                const isCorrect = p.answered === q.correct;
-
-                if (isCorrect) {
+                if (p.answered === q.correct) {
                     p.score += 100;
                     correctList.push(p.name);
                 } else {
@@ -419,7 +512,6 @@
                 }
             });
 
-            // Update Correct/Wrong Player Breakdown on Host Screen
             document.getElementById('correctPlayersList').innerHTML = correctList.length > 0
                 ? correctList.map(name => `<span class="px-2 py-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-lg">${name}</span>`).join('')
                 : `<span class="text-slate-500 italic text-[11px]">Nobody</span>`;
@@ -430,7 +522,6 @@
 
             document.getElementById('resultsPanel').classList.remove('hidden');
 
-            // Send Feedback to Controllers
             connections.forEach(conn => {
                 const p = gameState.players[conn.peer];
                 if (p) {
