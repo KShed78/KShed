@@ -133,7 +133,7 @@
                         class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                     <p id="nameError" class="hidden text-xs text-rose-400 font-bold mt-1 text-center"><i class="fas fa-exclamation-circle mr-1"></i> Name is required to join the game!</p>
                 </div>
-                <button onclick="joinGame()" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-xl font-bold text-white shadow-xl hover:opacity-90 transition-all">
+                <button onclick="joinGame()" id="connectBtn" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-xl font-bold text-white shadow-xl hover:opacity-90 transition-all">
                     Connect Controller
                 </button>
             </div>
@@ -318,6 +318,18 @@
     <script>
         const PEER_PREFIX = "kshed_trivia_room_";
         const QUESTION_TIME = 15;
+        
+        // WebRTC STUN Server Config for firewall/network traversal
+        const PEER_CONFIG = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
+            }
+        };
+
         let peer = null;
         let connections = []; // For Host
         let hostConn = null;  // For Player
@@ -415,11 +427,27 @@
             document.getElementById('roomCodeDisplay').innerText = gameState.roomCode;
             document.getElementById('lobbyRoomCode').innerText = gameState.roomCode;
 
-            peer = new Peer(PEER_PREFIX + gameState.roomCode);
+            peer = new Peer(PEER_PREFIX + gameState.roomCode, PEER_CONFIG);
+
+            peer.on('open', (id) => {
+                console.log('Host initialized with Peer ID:', id);
+            });
 
             peer.on('connection', (conn) => {
+                conn.on('open', () => {
+                    console.log('New player connected:', conn.peer);
+                });
+
                 conn.on('data', (data) => handleHostMessage(conn, data));
                 conn.on('close', () => removePlayer(conn.peer));
+            });
+
+            peer.on('error', (err) => {
+                console.error('PeerJS Host Error:', err);
+                if (err.type === 'unavailable-id') {
+                    // Regenerate code if ID conflict occurs
+                    initHost();
+                }
             });
         }
 
@@ -432,7 +460,11 @@
                     correctAnswers: 0,
                     wrongAnswers: 0
                 };
-                connections.push(conn);
+                
+                if (!connections.some(c => c.peer === conn.peer)) {
+                    connections.push(conn);
+                }
+
                 updateLobbyUI();
                 conn.send({ type: 'JOIN_SUCCESS', roomCode: gameState.roomCode });
             } else if (data.type === 'SUBMIT_ANSWER') {
@@ -449,6 +481,12 @@
             }
         }
 
+        function removePlayer(peerId) {
+            delete gameState.players[peerId];
+            connections = connections.filter(c => c.peer !== peerId);
+            updateLobbyUI();
+        }
+
         function updateLobbyUI() {
             const list = document.getElementById('playerList');
             const pKeys = Object.keys(gameState.players);
@@ -463,6 +501,11 @@
                 const startBtn = document.getElementById('startHostBtn');
                 startBtn.disabled = false;
                 startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                list.innerHTML = `<p class="text-xs text-slate-500 self-center">Waiting for players to enter code...</p>`;
+                const startBtn = document.getElementById('startHostBtn');
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
             }
         }
 
@@ -682,6 +725,7 @@
         function joinGame() {
             const codeInput = document.getElementById('joinRoomCode');
             const nameInput = document.getElementById('playerName');
+            const btn = document.getElementById('connectBtn');
             const code = codeInput.value.trim();
             const name = nameInput.value.trim();
             
@@ -707,16 +751,34 @@
 
             if (hasError) return;
 
-            peer = new Peer();
+            btn.innerText = "Connecting...";
+            btn.disabled = true;
+
+            peer = new Peer(PEER_CONFIG);
 
             peer.on('open', () => {
-                hostConn = peer.connect(PEER_PREFIX + code);
+                const targetPeerId = PEER_PREFIX + code;
+                hostConn = peer.connect(targetPeerId, { reliable: true });
 
                 hostConn.on('open', () => {
                     hostConn.send({ type: 'JOIN', name: name });
                 });
 
                 hostConn.on('data', (data) => handlePlayerMessage(data, name));
+
+                hostConn.on('error', (err) => {
+                    console.error('Connection error:', err);
+                    alert("Could not connect to host. Please verify the 4-digit room code.");
+                    btn.innerText = "Connect Controller";
+                    btn.disabled = false;
+                });
+            });
+
+            peer.on('error', (err) => {
+                console.error('PeerJS Client Error:', err);
+                alert("Connection failed. Please check your room code and try again.");
+                btn.innerText = "Connect Controller";
+                btn.disabled = false;
             });
         }
 
