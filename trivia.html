@@ -139,7 +139,7 @@
             </div>
         </div>
 
-        <!-- Host Lobby & Category Selection Screen -->
+        <!-- Host Lobby Screen -->
         <div id="hostLobbyScreen" class="hidden glass rounded-3xl p-6 md:p-8 shadow-2xl space-y-6 text-center">
             <div class="space-y-1">
                 <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Join on your phone using room code</p>
@@ -190,9 +190,9 @@
 
             <!-- Connected Players Display -->
             <div class="pt-2">
-                <h3 class="text-xs font-bold text-slate-400 mb-2">Connected Players (<span id="playerCount">0</span>)</h3>
+                <h3 class="text-xs font-bold text-slate-400 mb-2">Connected Devices (<span id="playerCount">0</span>)</h3>
                 <div id="playerList" class="flex flex-wrap justify-center gap-2 min-h-[50px] p-3 bg-slate-900/40 rounded-xl border border-slate-800">
-                    <p class="text-xs text-slate-500 self-center">Waiting for players to enter code...</p>
+                    <p class="text-xs text-slate-500 self-center">Waiting for devices to connect...</p>
                 </div>
             </div>
 
@@ -228,35 +228,22 @@
             </div>
 
             <div id="optionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <!-- Host displays choices -->
+                <!-- Options rendered here -->
             </div>
 
-            <div id="submittedStatus" class="text-center text-xs text-slate-400 font-bold pt-1">
-                Answers received: <span id="answeredCount" class="text-indigo-400">0</span> / <span id="totalPlayersCount">0</span>
-            </div>
-
-            <!-- Round Results Panel (Shows immediately after question ends) -->
-            <div id="resultsPanel" class="hidden space-y-4 pt-4 border-t border-slate-700/50">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl">
-                        <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                            <i class="fas fa-check-circle"></i> Correct
-                        </div>
-                        <div id="correctPlayersList" class="flex flex-wrap gap-1.5 text-xs font-bold text-slate-200 min-h-[24px]">
-                            <span class="text-slate-500 italic text-[11px]">Nobody</span>
-                        </div>
-                    </div>
-
-                    <div class="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl">
-                        <div class="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                            <i class="fas fa-times-circle"></i> Incorrect / Missed
-                        </div>
-                        <div id="wrongPlayersList" class="flex flex-wrap gap-1.5 text-xs font-bold text-slate-200 min-h-[24px]">
-                            <span class="text-slate-500 italic text-[11px]">Nobody</span>
-                        </div>
-                    </div>
+            <!-- Real-Time Connected Device Live Answer Statuses -->
+            <div class="space-y-2 pt-2">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-400">
+                    <span>Connected Devices & Live Results</span>
+                    <span>Answers Received: <span id="answeredCount" class="text-indigo-400">0</span> / <span id="totalPlayersCount">0</span></span>
                 </div>
+                <div id="liveDeviceStatuses" class="flex flex-wrap gap-2 p-3 bg-slate-900/50 rounded-xl border border-slate-800">
+                    <!-- Populated dynamically with player badges -->
+                </div>
+            </div>
 
+            <!-- Round Results Panel -->
+            <div id="resultsPanel" class="hidden space-y-4 pt-4 border-t border-slate-700/50">
                 <!-- Next Question Button -->
                 <button onclick="nextHostQuestion()" id="nextQBtn" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all text-base flex items-center justify-center gap-2">
                     <span>Next Question</span> <i class="fas fa-arrow-right"></i>
@@ -283,13 +270,13 @@
             </div>
         </div>
 
-        <!-- Final Stats & Pick New Game Screen -->
+        <!-- Final Summary Screen -->
         <div id="finalStatsScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6 text-center">
             <div class="space-y-2">
                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-pink-500 flex items-center justify-center text-3xl text-white mx-auto shadow-xl shadow-amber-500/20">
                     <i class="fas fa-trophy"></i>
                 </div>
-                <h2 class="text-3xl font-black text-white">Game Over - Final Stats!</h2>
+                <h2 class="text-3xl font-black text-white">Game Over - Final Summary!</h2>
                 <p class="text-xs font-bold text-indigo-400 uppercase tracking-widest" id="finalCategoryPlayed">Category: Science & Nature</p>
             </div>
 
@@ -299,11 +286,11 @@
                 <h3 id="winnerText" class="text-2xl font-black text-white">Player 1</h3>
             </div>
 
-            <!-- Detailed Player Accuracy Stats -->
+            <!-- Overall Performance Summary Table -->
             <div class="space-y-3 text-left">
-                <h3 class="text-xs font-black text-slate-300 uppercase tracking-wider text-center">Player Answer Breakdown</h3>
-                <div id="playerStatsList" class="space-y-3 max-h-72 overflow-y-auto pr-1">
-                    <!-- Populated dynamically -->
+                <h3 class="text-xs font-black text-slate-300 uppercase tracking-wider text-center">Final Player Leaderboard & Stats</h3>
+                <div id="playerStatsList" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    <!-- Dynamic summary rows inserted here -->
                 </div>
             </div>
 
@@ -319,7 +306,6 @@
         const PEER_PREFIX = "kshed_trivia_room_";
         const QUESTION_TIME = 15;
         
-        // WebRTC STUN Server Config for firewall/network traversal
         const PEER_CONFIG = {
             config: {
                 iceServers: [
@@ -331,15 +317,14 @@
         };
 
         let peer = null;
-        let connections = []; // For Host
-        let hostConn = null;  // For Player
+        let connections = [];
+        let hostConn = null;
         let isHost = false;
         let timerInterval = null;
         let timeLeft = QUESTION_TIME;
         let selectedCategoryId = '17';
         let selectedCategoryName = 'Science & Nature';
 
-        // Game State
         let gameState = {
             roomCode: "",
             players: {}, // id -> { name, score, answered, correctAnswers, wrongAnswers }
@@ -348,7 +333,6 @@
             answersReceived: 0
         };
 
-        // Fallback Local Questions
         const LOCAL_QUESTIONS = {
             '17': [
                 { question: "Which chemical element has the symbol 'O'?", options: ["Gold", "Oxygen", "Osmium", "Zinc"], correct: 1 },
@@ -445,7 +429,6 @@
             peer.on('error', (err) => {
                 console.error('PeerJS Host Error:', err);
                 if (err.type === 'unavailable-id') {
-                    // Regenerate code if ID conflict occurs
                     initHost();
                 }
             });
@@ -472,6 +455,8 @@
                     gameState.players[conn.peer].answered = data.index;
                     gameState.answersReceived++;
                     document.getElementById('answeredCount').innerText = gameState.answersReceived;
+                    
+                    updateLiveDeviceStatuses();
 
                     if (gameState.answersReceived >= Object.keys(gameState.players).length) {
                         clearInterval(timerInterval);
@@ -485,6 +470,9 @@
             delete gameState.players[peerId];
             connections = connections.filter(c => c.peer !== peerId);
             updateLobbyUI();
+            if (!document.getElementById('hostGameScreen').classList.contains('hidden')) {
+                updateLiveDeviceStatuses();
+            }
         }
 
         function updateLobbyUI() {
@@ -495,14 +483,14 @@
             if (pKeys.length > 0) {
                 list.innerHTML = pKeys.map(k => `
                     <div class="px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/40 rounded-xl font-bold text-xs text-indigo-300">
-                        ${gameState.players[k].name}
+                        <i class="fas fa-mobile-alt mr-1"></i> ${gameState.players[k].name}
                     </div>
                 `).join('');
                 const startBtn = document.getElementById('startHostBtn');
                 startBtn.disabled = false;
                 startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             } else {
-                list.innerHTML = `<p class="text-xs text-slate-500 self-center">Waiting for players to enter code...</p>`;
+                list.innerHTML = `<p class="text-xs text-slate-500 self-center">Waiting for devices to connect...</p>`;
                 const startBtn = document.getElementById('startHostBtn');
                 startBtn.disabled = true;
                 startBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -541,7 +529,7 @@
 
             const isLast = gameState.currentIdx >= gameState.questions.length - 1;
             document.getElementById('nextQBtn').innerHTML = isLast 
-                ? `<span>View Final Stats</span> <i class="fas fa-trophy"></i>` 
+                ? `<span>View Final Summary</span> <i class="fas fa-trophy"></i>` 
                 : `<span>Next Question</span> <i class="fas fa-arrow-right"></i>`;
 
             document.getElementById('optionsGrid').innerHTML = q.options.map((opt, i) => `
@@ -553,8 +541,43 @@
                 </div>
             `).join('');
 
+            updateLiveDeviceStatuses();
             broadcast({ type: 'NEW_QUESTION', index: gameState.currentIdx, duration: QUESTION_TIME });
             startTimer();
+        }
+
+        function updateLiveDeviceStatuses(revealed = false) {
+            const container = document.getElementById('liveDeviceStatuses');
+            const pKeys = Object.keys(gameState.players);
+            const q = gameState.questions[gameState.currentIdx];
+
+            if (pKeys.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-500 italic">No connected devices</span>`;
+                return;
+            }
+
+            container.innerHTML = pKeys.map(k => {
+                const p = gameState.players[k];
+                if (revealed) {
+                    const isRight = p.answered === q.correct;
+                    return isRight 
+                        ? `<div class="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-xl font-bold text-xs text-emerald-300 flex items-center gap-1.5">
+                            <i class="fas fa-check-circle text-emerald-400"></i> ${p.name} <span class="text-[10px] bg-emerald-500/30 px-1.5 py-0.5 rounded text-white font-black">RIGHT</span>
+                           </div>`
+                        : `<div class="px-3 py-1.5 bg-rose-500/20 border border-rose-500/40 rounded-xl font-bold text-xs text-rose-300 flex items-center gap-1.5">
+                            <i class="fas fa-times-circle text-rose-400"></i> ${p.name} <span class="text-[10px] bg-rose-500/30 px-1.5 py-0.5 rounded text-white font-black">WRONG</span>
+                           </div>`;
+                } else {
+                    const hasAnswered = p.answered !== -1;
+                    return hasAnswered
+                        ? `<div class="px-3 py-1.5 bg-indigo-500/30 border border-indigo-400 rounded-xl font-bold text-xs text-indigo-200 flex items-center gap-1.5">
+                            <i class="fas fa-check text-indigo-400"></i> ${p.name} <span class="text-[10px] text-indigo-300 uppercase">(Submitted)</span>
+                           </div>`
+                        : `<div class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl font-bold text-xs text-slate-400 flex items-center gap-1.5 opacity-60">
+                            <i class="fas fa-spinner fa-spin text-slate-500"></i> ${p.name} <span class="text-[10px] uppercase">(Thinking)</span>
+                           </div>`;
+                }
+            }).join('');
         }
 
         function startTimer() {
@@ -591,8 +614,6 @@
 
         function evaluateAnswers() {
             const q = gameState.questions[gameState.currentIdx];
-            const correctList = [];
-            const wrongList = [];
 
             q.options.forEach((_, i) => {
                 const card = document.getElementById(`optionCard-${i}`);
@@ -609,20 +630,13 @@
                 if (p.answered === q.correct) {
                     p.score += 100;
                     p.correctAnswers++;
-                    correctList.push(p.name);
                 } else {
                     p.wrongAnswers++;
-                    wrongList.push(p.name);
                 }
             });
 
-            document.getElementById('correctPlayersList').innerHTML = correctList.length > 0
-                ? correctList.map(name => `<span class="px-2 py-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-lg">${name}</span>`).join('')
-                : `<span class="text-slate-500 italic text-[11px]">Nobody</span>`;
-
-            document.getElementById('wrongPlayersList').innerHTML = wrongList.length > 0
-                ? wrongList.map(name => `<span class="px-2 py-1 bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-lg">${name}</span>`).join('')
-                : `<span class="text-slate-500 italic text-[11px]">Nobody</span>`;
+            // Reveal Right/Wrong statuses live on connected device list
+            updateLiveDeviceStatuses(true);
 
             document.getElementById('resultsPanel').classList.remove('hidden');
 
@@ -658,24 +672,27 @@
 
             if (winner) {
                 document.getElementById('winnerText').innerText = `${winner.name} (${winner.score} pts)`;
-                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
             }
 
             const totalQ = gameState.questions.length;
             const statsContainer = document.getElementById('playerStatsList');
 
-            statsContainer.innerHTML = sortedPlayers.map(p => {
+            statsContainer.innerHTML = sortedPlayers.map((p, idx) => {
                 const accPct = Math.round((p.correctAnswers / totalQ) * 100) || 0;
                 return `
                     <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-2">
                         <div class="flex justify-between items-center font-bold text-sm">
-                            <span class="text-white text-base">${p.name}</span>
-                            <span class="text-indigo-400">${p.score} pts</span>
+                            <span class="text-white text-base flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-lg ${idx === 0 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'} flex items-center justify-center text-xs font-black">#${idx + 1}</span>
+                                ${p.name}
+                            </span>
+                            <span class="text-indigo-400 font-extrabold text-base">${p.score} pts</span>
                         </div>
                         
                         <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold pt-1">
                             <div class="p-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl">
-                                <div class="text-[10px] text-slate-400 uppercase">Correct</div>
+                                <div class="text-[10px] text-slate-400 uppercase">Right</div>
                                 <div class="text-lg font-black">${p.correctAnswers}</div>
                             </div>
                             <div class="p-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl">
