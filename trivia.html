@@ -48,7 +48,6 @@
         .timer-ring {
             transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
         }
-        /* Hide arrows on numeric input */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -71,7 +70,7 @@
                 <h1 class="font-black text-xl md:text-2xl tracking-tight bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
                     OMNI TRIVIA PARTY
                 </h1>
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Trivial Pursuit Edition</p>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Fast-Paced Edition</p>
             </div>
         </div>
 
@@ -114,7 +113,7 @@
             </div>
         </div>
 
-        <!-- Join Screen (Mobile Controller Setup) -->
+        <!-- Join Screen -->
         <div id="joinScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
             <div class="text-center space-y-2">
                 <h2 class="text-3xl font-black text-white">Join Room</h2>
@@ -147,7 +146,7 @@
                 <div id="lobbyRoomCode" class="text-5xl font-mono font-black text-indigo-400 tracking-widest">----</div>
             </div>
 
-            <!-- Trivial Pursuit Categories -->
+            <!-- Categories -->
             <div class="space-y-3 text-left">
                 <label class="text-xs font-black text-slate-300 uppercase tracking-wider block text-center">Choose Game Category</label>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -182,7 +181,7 @@
                     <button onclick="selectCategory('any', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3 sm:col-span-2">
                         <div class="w-10 h-10 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center text-lg"><i class="fas fa-random"></i></div>
                         <div>
-                            <span class="text-sm font-bold text-white block">All Categories (Mixed Pursuit)</span>
+                            <span class="text-sm font-bold text-white block">All Categories (Mixed)</span>
                             <span class="text-[11px] text-slate-400">A mix of all topics in one game</span>
                         </div>
                     </button>
@@ -215,12 +214,12 @@
             <!-- Host Timer & Question Header -->
             <div class="flex flex-col md:flex-row items-center gap-6">
                 <!-- SVG Countdown Circle -->
-                <div class="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
+                <div class="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                         <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                         <path id="timerRing" class="timer-ring text-indigo-500" stroke-width="3.5" stroke-dasharray="100, 100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                     </svg>
-                    <span id="timerText" class="absolute font-black text-2xl text-white">30</span>
+                    <span id="timerText" class="absolute font-black text-2xl text-white">15</span>
                 </div>
 
                 <h2 id="questionText" class="text-xl md:text-2xl font-bold text-white leading-relaxed flex-1 text-center md:text-left">
@@ -232,19 +231,12 @@
                 <!-- Host displays choices -->
             </div>
 
-            <div id="submittedStatus" class="text-center text-xs text-slate-400 font-bold pt-2">
+            <div id="submittedStatus" class="text-center text-xs text-slate-400 font-bold pt-1">
                 Answers received: <span id="answeredCount" class="text-indigo-400">0</span> / <span id="totalPlayersCount">0</span>
             </div>
 
-            <!-- Results Panel (Revealed when time expires) -->
+            <!-- Round Results Panel (Shows immediately after question ends) -->
             <div id="resultsPanel" class="hidden space-y-4 pt-4 border-t border-slate-700/50">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-sm font-black text-slate-300 uppercase tracking-wider">Round Results</h3>
-                    <button onclick="showLeaderboard()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white rounded-xl shadow-lg transition-all">
-                        View Standings <i class="fas fa-arrow-right ml-1"></i>
-                    </button>
-                </div>
-                
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl">
                         <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1">
@@ -264,6 +256,11 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Direct Next Question Action Button -->
+                <button onclick="nextHostQuestion()" id="nextQBtnDirect" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all text-base flex items-center justify-center gap-2">
+                    <span>Show Next Question</span> <i class="fas fa-arrow-right"></i>
+                </button>
             </div>
         </div>
 
@@ -271,7 +268,7 @@
         <div id="controllerScreen" class="hidden glass rounded-3xl p-6 shadow-2xl space-y-6 text-center">
             <div class="flex justify-between items-center text-xs font-bold text-slate-400 border-b border-slate-700/50 pb-3">
                 <span id="controllerPlayerName">Player</span>
-                <span id="playerTimer" class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full font-mono font-black text-sm">⏱️ 30s</span>
+                <span id="playerTimer" class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full font-mono font-black text-sm">⏱️ 15s</span>
             </div>
 
             <div>
@@ -284,15 +281,6 @@
                 <button onclick="sendAnswer(2)" class="h-28 bg-amber-600 active:bg-amber-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">C</button>
                 <button onclick="sendAnswer(3)" class="h-28 bg-emerald-600 active:bg-emerald-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">D</button>
             </div>
-        </div>
-
-        <!-- Leaderboard Screen -->
-        <div id="leaderboardScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6 text-center">
-            <h2 class="text-3xl font-black text-white">Leaderboard</h2>
-            <div id="leaderboardList" class="space-y-2 max-w-md mx-auto"></div>
-            <button onclick="nextHostQuestion()" id="nextQBtn" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-white shadow-xl transition-all">
-                Next Question
-            </button>
         </div>
 
         <!-- Final Stats & Pick New Game Screen -->
@@ -329,7 +317,7 @@
 
     <script>
         const PEER_PREFIX = "omni_trivia_room_";
-        const QUESTION_TIME = 30; // 30 second countdown
+        const QUESTION_TIME = 15; // Fast 15s timer for quick gameplay
         let peer = null;
         let connections = []; // For Host
         let hostConn = null;  // For Player
@@ -348,22 +336,22 @@
             answersReceived: 0
         };
 
-        // Fallback Questions by Specific Trivial Pursuit Category
+        // Fallback Local Questions
         const LOCAL_QUESTIONS = {
-            '17': [ // Science & Nature
+            '17': [
                 { question: "Which chemical element has the symbol 'O'?", options: ["Gold", "Oxygen", "Osmium", "Zinc"], correct: 1 },
                 { question: "How many bones are in the adult human body?", options: ["206", "180", "214", "250"], correct: 0 },
                 { question: "What is the hardest natural substance on Earth?", options: ["Quartz", "Granite", "Diamond", "Titanium"], correct: 2 }
             ],
-            '18': [ // Technology
+            '18': [
                 { question: "Which company created the Java programming language?", options: ["Sun Microsystems", "Microsoft", "Apple", "Google"], correct: 0 },
                 { question: "What does CPU stand for?", options: ["Central Processing Unit", "Computer Personal Unit", "Central Power User", "Control Process Unit"], correct: 0 }
             ],
-            '25': [ // Arts & Literature
+            '25': [
                 { question: "Who painted 'Girl with a Pearl Earring'?", options: ["da Vinci", "Monet", "Johannes Vermeer", "van Gogh"], correct: 2 },
                 { question: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "William Shakespeare", "Mark Twain", "Jane Austen"], correct: 1 }
             ],
-            '22': [ // Geography
+            '22': [
                 { question: "What is the capital city of Australia?", options: ["Sydney", "Melbourne", "Canberra", "Brisbane"], correct: 2 },
                 { question: "Which country has the longest coastline in the world?", options: ["Russia", "Canada", "Australia", "Indonesia"], correct: 1 }
             ],
@@ -380,7 +368,6 @@
             selectedCategoryName = btnElement.querySelector('span').innerText;
         }
 
-        // Generate purely numeric 4-digit room code (1000 - 9999)
         function generateRoomCode() {
             return Math.floor(1000 + Math.random() * 9000).toString();
         }
@@ -430,8 +417,6 @@
 
             peer = new Peer(PEER_PREFIX + gameState.roomCode);
 
-            peer.on('open', () => console.log('Host connected with room code:', gameState.roomCode));
-
             peer.on('connection', (conn) => {
                 conn.on('data', (data) => handleHostMessage(conn, data));
                 conn.on('close', () => removePlayer(conn.peer));
@@ -456,6 +441,7 @@
                     gameState.answersReceived++;
                     document.getElementById('answeredCount').innerText = gameState.answersReceived;
 
+                    // Immediately reveal answers if everyone submitted
                     if (gameState.answersReceived >= Object.keys(gameState.players).length) {
                         clearInterval(timerInterval);
                         evaluateAnswers();
@@ -486,7 +472,6 @@
             gameState.questions = await fetchQuestions();
             gameState.currentIdx = 0;
 
-            // Reset scores & stat counters for a fresh game
             Object.keys(gameState.players).forEach(k => {
                 gameState.players[k].score = 0;
                 gameState.players[k].correctAnswers = 0;
@@ -511,6 +496,12 @@
             document.getElementById('questionText').innerText = q.question;
             document.getElementById('answeredCount').innerText = "0";
             document.getElementById('totalPlayersCount').innerText = Object.keys(gameState.players).length;
+
+            // Set button text dynamically
+            const isLast = gameState.currentIdx >= gameState.questions.length - 1;
+            document.getElementById('nextQBtnDirect').innerHTML = isLast 
+                ? `<span>View Final Stats</span> <i class="fas fa-trophy"></i>` 
+                : `<span>Show Next Question</span> <i class="fas fa-arrow-right"></i>`;
 
             document.getElementById('optionsGrid').innerHTML = q.options.map((opt, i) => `
                 <div id="optionCard-${i}" class="p-4 bg-slate-800 rounded-xl font-bold text-sm text-slate-300 flex items-center gap-3 border border-slate-700 transition-all">
@@ -607,29 +598,9 @@
             });
         }
 
-        function showLeaderboard() {
-            document.getElementById('hostGameScreen').classList.add('hidden');
-            document.getElementById('leaderboardScreen').classList.remove('hidden');
-
-            const sorted = Object.values(gameState.players).sort((a, b) => b.score - a.score);
-
-            document.getElementById('leaderboardList').innerHTML = sorted.map((p, i) => `
-                <div class="flex justify-between items-center p-4 bg-slate-800/80 rounded-xl border border-slate-700 font-bold text-sm">
-                    <span class="text-slate-300">#${i + 1} ${p.name}</span>
-                    <span class="text-indigo-400">${p.score} pts</span>
-                </div>
-            `).join('');
-
-            // Change button text on final question
-            const isLastQ = gameState.currentIdx >= gameState.questions.length - 1;
-            document.getElementById('nextQBtn').innerText = isLastQ ? "View Game Statistics 📊" : "Next Question";
-        }
-
         function nextHostQuestion() {
             gameState.currentIdx++;
             if (gameState.currentIdx < gameState.questions.length) {
-                document.getElementById('leaderboardScreen').classList.add('hidden');
-                document.getElementById('hostGameScreen').classList.remove('hidden');
                 renderHostQuestion();
             } else {
                 showFinalStats();
@@ -637,7 +608,7 @@
         }
 
         function showFinalStats() {
-            document.getElementById('leaderboardScreen').classList.add('hidden');
+            document.getElementById('hostGameScreen').classList.add('hidden');
             document.getElementById('finalStatsScreen').classList.remove('hidden');
             document.getElementById('finalCategoryPlayed').innerText = `Category: ${selectedCategoryName}`;
 
@@ -676,7 +647,6 @@
                             </div>
                         </div>
 
-                        <!-- Progress Bar -->
                         <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden flex">
                             <div class="bg-emerald-500 h-full" style="width: ${(p.correctAnswers / totalQ) * 100}%"></div>
                             <div class="bg-rose-500 h-full" style="width: ${(p.wrongAnswers / totalQ) * 100}%"></div>
@@ -719,7 +689,6 @@
             
             let hasError = false;
 
-            // Room code validation
             if (!code || code.length !== 4) {
                 document.getElementById('codeError').classList.remove('hidden');
                 codeInput.classList.add('border-rose-500');
@@ -729,7 +698,6 @@
                 codeInput.classList.remove('border-rose-500');
             }
 
-            // Name field validation
             if (!name) {
                 document.getElementById('nameError').classList.remove('hidden');
                 nameInput.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/50');
@@ -781,7 +749,7 @@
         function sendAnswer(index) {
             if (hostConn) {
                 hostConn.send({ type: 'SUBMIT_ANSWER', index: index });
-                document.getElementById('controllerStatus').innerText = "Answer Submitted! Waiting for timer...";
+                document.getElementById('controllerStatus').innerText = "Answer Submitted! Waiting for host...";
                 toggleControllerButtons(false);
             }
         }
