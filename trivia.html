@@ -48,6 +48,15 @@
         .timer-ring {
             transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
         }
+        /* Hide arrows on numeric input */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between p-4 md:p-8">
@@ -99,7 +108,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-white text-lg">Join Game (Phone)</h3>
-                        <p class="text-xs text-slate-400">Enter a 4-character room code to use your phone as a controller.</p>
+                        <p class="text-xs text-slate-400">Enter a 4-digit room code to use your phone as a controller.</p>
                     </div>
                 </button>
             </div>
@@ -109,19 +118,21 @@
         <div id="joinScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
             <div class="text-center space-y-2">
                 <h2 class="text-3xl font-black text-white">Join Room</h2>
-                <p class="text-slate-400 text-sm">Enter the code displayed on the main host screen.</p>
+                <p class="text-slate-400 text-sm">Enter the numeric code displayed on the main host screen.</p>
             </div>
 
             <div class="space-y-4 max-w-sm mx-auto">
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Room Code</label>
-                    <input type="text" id="joinRoomCode" maxlength="4" placeholder="e.g. A1B2" 
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">4-Digit Room Code</label>
+                    <input type="number" id="joinRoomCode" maxlength="4" placeholder="e.g. 8492" oninput="if(this.value.length > 4) this.value = this.value.slice(0,4);"
                         class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-2xl font-mono uppercase font-bold text-indigo-400 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <p id="codeError" class="hidden text-xs text-rose-400 font-bold mt-1 text-center"><i class="fas fa-exclamation-circle mr-1"></i> Please enter a 4-digit room code.</p>
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Your Name</label>
-                    <input type="text" id="playerName" placeholder="Enter your name" 
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Your Name <span class="text-rose-400">*</span></label>
+                    <input type="text" id="playerName" placeholder="Enter your name" oninput="clearNameError()"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                    <p id="nameError" class="hidden text-xs text-rose-400 font-bold mt-1 text-center"><i class="fas fa-exclamation-circle mr-1"></i> Name is required to join the game!</p>
                 </div>
                 <button onclick="joinGame()" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-xl font-bold text-white shadow-xl hover:opacity-90 transition-all">
                     Connect Controller
@@ -339,8 +350,9 @@
             selectedCategoryName = btnElement.querySelector('span').innerText;
         }
 
+        // Generate purely numeric 4-digit room code (1000 - 9999)
         function generateRoomCode() {
-            return Math.random().toString(36).substring(2, 6).toUpperCase();
+            return Math.floor(1000 + Math.random() * 9000).toString();
         }
 
         function decodeHTML(html) {
@@ -585,11 +597,41 @@
             document.getElementById('joinScreen').classList.remove('hidden');
         }
 
-        function joinGame() {
-            const code = document.getElementById('joinRoomCode').value.toUpperCase().trim();
-            const name = document.getElementById('playerName').value.trim();
+        function clearNameError() {
+            const nameInput = document.getElementById('playerName');
+            nameInput.classList.remove('border-rose-500', 'ring-2', 'ring-rose-500/50');
+            document.getElementById('nameError').classList.add('hidden');
+        }
 
-            if (!code || !name) return alert("Please fill in both fields.");
+        function joinGame() {
+            const codeInput = document.getElementById('joinRoomCode');
+            const nameInput = document.getElementById('playerName');
+            const code = codeInput.value.trim();
+            const name = nameInput.value.trim();
+            
+            let hasError = false;
+
+            // Room code validation
+            if (!code || code.length !== 4) {
+                document.getElementById('codeError').classList.remove('hidden');
+                codeInput.classList.add('border-rose-500');
+                hasError = true;
+            } else {
+                document.getElementById('codeError').classList.add('hidden');
+                codeInput.classList.remove('border-rose-500');
+            }
+
+            // Name field validation
+            if (!name) {
+                document.getElementById('nameError').classList.remove('hidden');
+                nameInput.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/50');
+                nameInput.focus();
+                hasError = true;
+            } else {
+                clearNameError();
+            }
+
+            if (hasError) return;
 
             peer = new Peer();
 
