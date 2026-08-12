@@ -295,6 +295,36 @@
             </button>
         </div>
 
+        <!-- Final Stats & Pick New Game Screen -->
+        <div id="finalStatsScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6 text-center">
+            <div class="space-y-2">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-pink-500 flex items-center justify-center text-3xl text-white mx-auto shadow-xl shadow-amber-500/20">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <h2 class="text-3xl font-black text-white">Game Over - Final Stats!</h2>
+                <p class="text-xs font-bold text-indigo-400 uppercase tracking-widest" id="finalCategoryPlayed">Category: Science & Nature</p>
+            </div>
+
+            <!-- Winner Highlight -->
+            <div id="winnerCard" class="bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-indigo-500/30 p-4 rounded-2xl text-center space-y-1">
+                <span class="text-xs font-black text-amber-400 uppercase tracking-widest"><i class="fas fa-crown mr-1"></i> Champion</span>
+                <h3 id="winnerText" class="text-2xl font-black text-white">Player 1</h3>
+            </div>
+
+            <!-- Detailed Player Accuracy Stats -->
+            <div class="space-y-3 text-left">
+                <h3 class="text-xs font-black text-slate-300 uppercase tracking-wider text-center">Player Answer Breakdown</h3>
+                <div id="playerStatsList" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Pick New Game Button -->
+            <button onclick="pickNewGame()" class="w-full py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 text-lg">
+                <i class="fas fa-redo"></i> Pick New Game
+            </button>
+        </div>
+
     </main>
 
     <script>
@@ -312,7 +342,7 @@
         // Game State
         let gameState = {
             roomCode: "",
-            players: {}, // id -> { name, score, answered }
+            players: {}, // id -> { name, score, answered, correctAnswers, wrongAnswers }
             questions: [],
             currentIdx: 0,
             answersReceived: 0
@@ -410,7 +440,13 @@
 
         function handleHostMessage(conn, data) {
             if (data.type === 'JOIN') {
-                gameState.players[conn.peer] = { name: data.name, score: 0, answered: -1 };
+                gameState.players[conn.peer] = { 
+                    name: data.name, 
+                    score: 0, 
+                    answered: -1,
+                    correctAnswers: 0,
+                    wrongAnswers: 0
+                };
                 connections.push(conn);
                 updateLobbyUI();
                 conn.send({ type: 'JOIN_SUCCESS', roomCode: gameState.roomCode });
@@ -449,6 +485,13 @@
             document.getElementById('startHostBtn').innerText = "Loading Questions...";
             gameState.questions = await fetchQuestions();
             gameState.currentIdx = 0;
+
+            // Reset scores & stat counters for a fresh game
+            Object.keys(gameState.players).forEach(k => {
+                gameState.players[k].score = 0;
+                gameState.players[k].correctAnswers = 0;
+                gameState.players[k].wrongAnswers = 0;
+            });
 
             document.getElementById('hostLobbyScreen').classList.add('hidden');
             document.getElementById('hostGameScreen').classList.remove('hidden');
@@ -533,8 +576,10 @@
                 const p = gameState.players[k];
                 if (p.answered === q.correct) {
                     p.score += 100;
+                    p.correctAnswers++;
                     correctList.push(p.name);
                 } else {
+                    p.wrongAnswers++;
                     wrongList.push(p.name);
                 }
             });
@@ -574,6 +619,10 @@
                     <span class="text-indigo-400">${p.score} pts</span>
                 </div>
             `).join('');
+
+            // Change button text on final question
+            const isLastQ = gameState.currentIdx >= gameState.questions.length - 1;
+            document.getElementById('nextQBtn').innerText = isLastQ ? "View Game Statistics 📊" : "Next Question";
         }
 
         function nextHostQuestion() {
@@ -583,8 +632,67 @@
                 document.getElementById('hostGameScreen').classList.remove('hidden');
                 renderHostQuestion();
             } else {
-                alert("Game Over! Final Leaderboard Shown.");
+                showFinalStats();
             }
+        }
+
+        function showFinalStats() {
+            document.getElementById('leaderboardScreen').classList.add('hidden');
+            document.getElementById('finalStatsScreen').classList.remove('hidden');
+            document.getElementById('finalCategoryPlayed').innerText = `Category: ${selectedCategoryName}`;
+
+            const sortedPlayers = Object.values(gameState.players).sort((a, b) => b.score - a.score);
+            const winner = sortedPlayers[0];
+
+            if (winner) {
+                document.getElementById('winnerText').innerText = `${winner.name} (${winner.score} pts)`;
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            }
+
+            const totalQ = gameState.questions.length;
+            const statsContainer = document.getElementById('playerStatsList');
+
+            statsContainer.innerHTML = sortedPlayers.map(p => {
+                const accPct = Math.round((p.correctAnswers / totalQ) * 100) || 0;
+                return `
+                    <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-2">
+                        <div class="flex justify-between items-center font-bold text-sm">
+                            <span class="text-white text-base">${p.name}</span>
+                            <span class="text-indigo-400">${p.score} pts</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold pt-1">
+                            <div class="p-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl">
+                                <div class="text-[10px] text-slate-400 uppercase">Correct</div>
+                                <div class="text-lg font-black">${p.correctAnswers}</div>
+                            </div>
+                            <div class="p-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl">
+                                <div class="text-[10px] text-slate-400 uppercase">Wrong</div>
+                                <div class="text-lg font-black">${p.wrongAnswers}</div>
+                            </div>
+                            <div class="p-2 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-xl">
+                                <div class="text-[10px] text-slate-400 uppercase">Accuracy</div>
+                                <div class="text-lg font-black">${accPct}%</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden flex">
+                            <div class="bg-emerald-500 h-full" style="width: ${(p.correctAnswers / totalQ) * 100}%"></div>
+                            <div class="bg-rose-500 h-full" style="width: ${(p.wrongAnswers / totalQ) * 100}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            broadcast({ type: 'GAME_OVER' });
+        }
+
+        function pickNewGame() {
+            document.getElementById('finalStatsScreen').classList.add('hidden');
+            document.getElementById('hostLobbyScreen').classList.remove('hidden');
+            document.getElementById('startHostBtn').innerText = "Start Party Game";
+            updateLobbyUI();
         }
 
         function broadcast(msg) {
@@ -664,6 +772,9 @@
                 } else {
                     document.getElementById('controllerStatus').innerText = `❌ Incorrect! (Answer: ${data.correctOption})`;
                 }
+            } else if (data.type === 'GAME_OVER') {
+                document.getElementById('controllerStatus').innerText = "🏁 Game Over! Look at the main screen for stats.";
+                toggleControllerButtons(false);
             }
         }
 
