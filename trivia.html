@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniTrivia Party</title>
+    <title>KShed Trivia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -68,9 +68,9 @@
             </div>
             <div>
                 <h1 class="font-black text-xl md:text-2xl tracking-tight bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
-                    OMNI TRIVIA PARTY
+                    KSHED TRIVIA
                 </h1>
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Fast-Paced Edition</p>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Party Edition</p>
             </div>
         </div>
 
@@ -197,7 +197,7 @@
             </div>
 
             <button id="startHostBtn" onclick="startHostGame()" disabled class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl opacity-50 cursor-not-allowed transition-all">
-                Start Party Game
+                Start Game
             </button>
         </div>
 
@@ -240,7 +240,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl">
                         <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                            <i class="fas fa-check-circle"></i> Got It Right
+                            <i class="fas fa-check-circle"></i> Correct
                         </div>
                         <div id="correctPlayersList" class="flex flex-wrap gap-1.5 text-xs font-bold text-slate-200 min-h-[24px]">
                             <span class="text-slate-500 italic text-[11px]">Nobody</span>
@@ -249,7 +249,7 @@
 
                     <div class="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl">
                         <div class="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                            <i class="fas fa-times-circle"></i> Got It Wrong / Missed
+                            <i class="fas fa-times-circle"></i> Incorrect / Missed
                         </div>
                         <div id="wrongPlayersList" class="flex flex-wrap gap-1.5 text-xs font-bold text-slate-200 min-h-[24px]">
                             <span class="text-slate-500 italic text-[11px]">Nobody</span>
@@ -257,9 +257,9 @@
                     </div>
                 </div>
 
-                <!-- Direct Next Question Action Button -->
-                <button onclick="nextHostQuestion()" id="nextQBtnDirect" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all text-base flex items-center justify-center gap-2">
-                    <span>Show Next Question</span> <i class="fas fa-arrow-right"></i>
+                <!-- Next Question Button -->
+                <button onclick="nextHostQuestion()" id="nextQBtn" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all text-base flex items-center justify-center gap-2">
+                    <span>Next Question</span> <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </div>
@@ -316,8 +316,8 @@
     </main>
 
     <script>
-        const PEER_PREFIX = "omni_trivia_room_";
-        const QUESTION_TIME = 15; // Fast 15s timer for quick gameplay
+        const PEER_PREFIX = "kshed_trivia_room_";
+        const QUESTION_TIME = 15;
         let peer = null;
         let connections = []; // For Host
         let hostConn = null;  // For Player
@@ -441,7 +441,6 @@
                     gameState.answersReceived++;
                     document.getElementById('answeredCount').innerText = gameState.answersReceived;
 
-                    // Immediately reveal answers if everyone submitted
                     if (gameState.answersReceived >= Object.keys(gameState.players).length) {
                         clearInterval(timerInterval);
                         evaluateAnswers();
@@ -497,11 +496,10 @@
             document.getElementById('answeredCount').innerText = "0";
             document.getElementById('totalPlayersCount').innerText = Object.keys(gameState.players).length;
 
-            // Set button text dynamically
             const isLast = gameState.currentIdx >= gameState.questions.length - 1;
-            document.getElementById('nextQBtnDirect').innerHTML = isLast 
+            document.getElementById('nextQBtn').innerHTML = isLast 
                 ? `<span>View Final Stats</span> <i class="fas fa-trophy"></i>` 
-                : `<span>Show Next Question</span> <i class="fas fa-arrow-right"></i>`;
+                : `<span>Next Question</span> <i class="fas fa-arrow-right"></i>`;
 
             document.getElementById('optionsGrid').innerHTML = q.options.map((opt, i) => `
                 <div id="optionCard-${i}" class="p-4 bg-slate-800 rounded-xl font-bold text-sm text-slate-300 flex items-center gap-3 border border-slate-700 transition-all">
@@ -661,7 +659,7 @@
         function pickNewGame() {
             document.getElementById('finalStatsScreen').classList.add('hidden');
             document.getElementById('hostLobbyScreen').classList.remove('hidden');
-            document.getElementById('startHostBtn').innerText = "Start Party Game";
+            document.getElementById('startHostBtn').innerText = "Start Game";
             updateLobbyUI();
         }
 
