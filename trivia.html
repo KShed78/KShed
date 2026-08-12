@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniTrivia Party</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- PeerJS for WebRTC real-time phone connections -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+        }
+        body {
+            background-color: var(--bg-dark);
+            background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 45%),
+                        radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.12), transparent 45%),
+                        var(--bg-dark);
+            background-attachment: fixed;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .glass {
+            background: rgba(19, 27, 46, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-btn {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.2s ease;
+        }
+        .glass-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            background: rgba(51, 65, 85, 0.85);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="max-w-4xl w-full mx-auto flex justify-between items-center mb-6">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-500/30">
+                <i class="fas fa-users text-white"></i>
+            </div>
+            <div>
+                <h1 class="font-black text-xl md:text-2xl tracking-tight bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
+                    OMNI TRIVIA PARTY
+                </h1>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Phone Controller Edition</p>
+            </div>
+        </div>
+
+        <div id="roomBadge" class="hidden glass px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+            <span class="text-slate-400">ROOM CODE:</span>
+            <span id="roomCodeDisplay" class="text-indigo-400 font-mono text-base tracking-widest">----</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-3xl w-full mx-auto my-auto">
+        
+        <!-- Mode Selection Screen -->
+        <div id="modeScreen" class="glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6 text-center">
+            <div class="space-y-2">
+                <h2 class="text-3xl font-black text-white">How do you want to play?</h2>
+                <p class="text-slate-400 text-sm">Create a party on your TV/Laptop or join with your phone code.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                <button onclick="initHost()" class="glass-btn p-6 rounded-2xl text-left space-y-3 group border-indigo-500/40 bg-indigo-500/10">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                        <i class="fas fa-desktop"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-lg">Create Game (Host)</h3>
+                        <p class="text-xs text-slate-400">Display this on a main TV or laptop screen for everyone to see.</p>
+                    </div>
+                </button>
+
+                <button onclick="showJoinScreen()" class="glass-btn p-6 rounded-2xl text-left space-y-3 group">
+                    <div class="w-12 h-12 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-lg">Join Game (Phone)</h3>
+                        <p class="text-xs text-slate-400">Enter a 4-character room code to use your phone as a controller.</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Join Screen (Mobile Controller Setup) -->
+        <div id="joinScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <h2 class="text-3xl font-black text-white">Join Room</h2>
+                <p class="text-slate-400 text-sm">Enter the code displayed on the main host screen.</p>
+            </div>
+
+            <div class="space-y-4 max-w-sm mx-auto">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Room Code</label>
+                    <input type="text" id="joinRoomCode" maxlength="4" placeholder="e.g. A1B2" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-2xl font-mono uppercase font-bold text-indigo-400 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Your Name</label>
+                    <input type="text" id="playerName" placeholder="Enter your name" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <button onclick="joinGame()" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-xl font-bold text-white shadow-xl hover:opacity-90 transition-all">
+                    Connect Controller
+                </button>
+            </div>
+        </div>
+
+        <!-- Host Lobby Screen -->
+        <div id="hostLobbyScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-8 text-center">
+            <div class="space-y-2">
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Join on your phone using code</p>
+                <div id="lobbyRoomCode" class="text-5xl font-mono font-black text-indigo-400 tracking-widest py-2">----</div>
+            </div>
+
+            <div>
+                <h3 class="text-sm font-bold text-slate-400 mb-4">Connected Players (<span id="playerCount">0</span>)</h3>
+                <div id="playerList" class="flex flex-wrap justify-center gap-3 min-h-[100px] p-4 bg-slate-900/40 rounded-2xl border border-slate-800">
+                    <p class="text-xs text-slate-500 self-center">Waiting for players to enter code...</p>
+                </div>
+            </div>
+
+            <button id="startHostBtn" onclick="startHostGame()" disabled class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl opacity-50 cursor-not-allowed transition-all">
+                Start Party Game
+            </button>
+        </div>
+
+        <!-- Host Question Display Screen -->
+        <div id="hostGameScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center text-xs font-bold text-slate-400 border-b border-slate-700/50 pb-4">
+                <span>Question <span id="currentQNum">1</span>/10</span>
+                <span id="hostStatusBadge" class="text-indigo-400">Waiting for answers...</span>
+            </div>
+
+            <h2 id="questionText" class="text-xl md:text-2xl font-bold text-white leading-relaxed min-h-[80px]">
+                Loading question...
+            </h2>
+
+            <div id="optionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Host displays choices -->
+            </div>
+
+            <div id="submittedStatus" class="text-center text-xs text-slate-400 font-bold pt-2">
+                Answers received: <span id="answeredCount" class="text-indigo-400">0</span> / <span id="totalPlayersCount">0</span>
+            </div>
+        </div>
+
+        <!-- Player Controller Screen (Phone Interface) -->
+        <div id="controllerScreen" class="hidden glass rounded-3xl p-6 shadow-2xl space-y-6 text-center">
+            <div>
+                <span id="controllerPlayerName" class="text-xs font-bold text-slate-400">Player</span>
+                <h2 id="controllerStatus" class="text-xl font-bold text-white mt-1">Get Ready!</h2>
+            </div>
+
+            <div id="controllerButtons" class="grid grid-cols-2 gap-4">
+                <button onclick="sendAnswer(0)" class="h-28 bg-indigo-600 active:bg-indigo-700 rounded-2xl font-black text-3xl text-white shadow-lg">A</button>
+                <button onclick="sendAnswer(1)" class="h-28 bg-pink-600 active:bg-pink-700 rounded-2xl font-black text-3xl text-white shadow-lg">B</button>
+                <button onclick="sendAnswer(2)" class="h-28 bg-amber-600 active:bg-amber-700 rounded-2xl font-black text-3xl text-white shadow-lg">C</button>
+                <button onclick="sendAnswer(3)" class="h-28 bg-emerald-600 active:bg-emerald-700 rounded-2xl font-black text-3xl text-white shadow-lg">D</button>
+            </div>
+        </div>
+
+        <!-- Leaderboard Screen -->
+        <div id="leaderboardScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6 text-center">
+            <h2 class="text-3xl font-black text-white">Leaderboard</h2>
+            <div id="leaderboardList" class="space-y-2 max-w-md mx-auto"></div>
+            <button onclick="nextHostQuestion()" id="nextQBtn" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-white shadow-xl transition-all">
+                Next Question
+            </button>
+        </div>
+
+    </main>
+
+    <script>
+        const PEER_PREFIX = "omni_trivia_room_";
+        let peer = null;
+        let connections = []; // For Host
+        let hostConn = null;  // For Player
+        let isHost = false;
+
+        // Game State
+        let gameState = {
+            roomCode: "",
+            players: {}, // id -> { name, score, answered }
+            questions: [],
+            currentIdx: 0,
+            answersReceived: 0
+        };
+
+        // Fallback Questions
+        const QUESTIONS = [
+            { question: "Which company created the Java programming language?", options: ["Sun Microsystems", "Microsoft", "Apple", "Google"], correct: 0 },
+            { question: "What is the capital city of Australia?", options: ["Sydney", "Melbourne", "Canberra", "Brisbane"], correct: 2 },
+            { question: "Which movie won Best Picture at the Academy Awards in 2020?", options: ["1917", "Parasite", "Joker", "Ford v Ferrari"], correct: 1 },
+            { question: "Who painted 'Girl with a Pearl Earring'?", options: ["Leonardo da Vinci", "Claude Monet", "Johannes Vermeer", "Vincent van Gogh"], correct: 2 }
+        ];
+
+        function generateRoomCode() {
+            return Math.random().toString(36).substring(2, 6).toUpperCase();
+        }
+
+        // ================= HOST LOGIC =================
+        function initHost() {
+            isHost = true;
+            gameState.roomCode = generateRoomCode();
+            
+            document.getElementById('modeScreen').classList.add('hidden');
+            document.getElementById('hostLobbyScreen').classList.remove('hidden');
+            document.getElementById('roomBadge').classList.remove('hidden');
+            document.getElementById('roomCodeDisplay').innerText = gameState.roomCode;
+            document.getElementById('lobbyRoomCode').innerText = gameState.roomCode;
+
+            peer = new Peer(PEER_PREFIX + gameState.roomCode);
+
+            peer.on('open', () => console.log('Host connected with room code:', gameState.roomCode));
+
+            peer.on('connection', (conn) => {
+                conn.on('data', (data) => handleHostMessage(conn, data));
+                conn.on('close', () => removePlayer(conn.peer));
+            });
+        }
+
+        function handleHostMessage(conn, data) {
+            if (data.type === 'JOIN') {
+                gameState.players[conn.peer] = { name: data.name, score: 0, answered: -1 };
+                connections.push(conn);
+                updateLobbyUI();
+                conn.send({ type: 'JOIN_SUCCESS', roomCode: gameState.roomCode });
+            } else if (data.type === 'SUBMIT_ANSWER') {
+                if (gameState.players[conn.peer] && gameState.players[conn.peer].answered === -1) {
+                    gameState.players[conn.peer].answered = data.index;
+                    gameState.answersReceived++;
+                    document.getElementById('answeredCount').innerText = gameState.answersReceived;
+
+                    if (gameState.answersReceived >= Object.keys(gameState.players).length) {
+                        evaluateAnswers();
+                    }
+                }
+            }
+        }
+
+        function updateLobbyUI() {
+            const list = document.getElementById('playerList');
+            const pKeys = Object.keys(gameState.players);
+            document.getElementById('playerCount').innerText = pKeys.length;
+
+            if (pKeys.length > 0) {
+                list.innerHTML = pKeys.map(k => `
+                    <div class="px-4 py-2 bg-indigo-500/20 border border-indigo-500/40 rounded-xl font-bold text-xs text-indigo-300">
+                        ${gameState.players[k].name}
+                    </div>
+                `).join('');
+                const startBtn = document.getElementById('startHostBtn');
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function startHostGame() {
+            gameState.questions = QUESTIONS;
+            gameState.currentIdx = 0;
+            document.getElementById('hostLobbyScreen').classList.add('hidden');
+            document.getElementById('hostGameScreen').classList.remove('hidden');
+            renderHostQuestion();
+        }
+
+        function renderHostQuestion() {
+            const q = gameState.questions[gameState.currentIdx];
+            gameState.answersReceived = 0;
+            
+            // Reset player answers
+            Object.keys(gameState.players).forEach(k => gameState.players[k].answered = -1);
+
+            document.getElementById('currentQNum').innerText = gameState.currentIdx + 1;
+            document.getElementById('questionText').innerText = q.question;
+            document.getElementById('answeredCount').innerText = "0";
+            document.getElementById('totalPlayersCount').innerText = Object.keys(gameState.players).length;
+
+            document.getElementById('optionsGrid').innerHTML = q.options.map((opt, i) => `
+                <div class="p-4 bg-slate-800 rounded-xl font-bold text-sm text-slate-300 flex items-center gap-3 border border-slate-700">
+                    <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xs">
+                        ${['A','B','C','D'][i]}
+                    </span>
+                    <span>${opt}</span>
+                </div>
+            `).join('');
+
+            // Broadcast question state to phone controllers
+            broadcast({ type: 'NEW_QUESTION', index: gameState.currentIdx });
+        }
+
+        function evaluateAnswers() {
+            const q = gameState.questions[gameState.currentIdx];
+
+            Object.keys(gameState.players).forEach(k => {
+                const p = gameState.players[k];
+                if (p.answered === q.correct) {
+                    p.score += 100;
+                }
+            });
+
+            // Send feedback to controllers
+            connections.forEach(conn => {
+                const p = gameState.players[conn.peer];
+                if (p) {
+                    conn.send({
+                        type: 'ROUND_RESULT',
+                        correct: p.answered === q.correct,
+                        score: p.score
+                    });
+                }
+            });
+
+            setTimeout(showLeaderboard, 1500);
+        }
+
+        function showLeaderboard() {
+            document.getElementById('hostGameScreen').classList.add('hidden');
+            document.getElementById('leaderboardScreen').classList.remove('hidden');
+
+            const sorted = Object.values(gameState.players).sort((a, b) => b.score - a.score);
+
+            document.getElementById('leaderboardList').innerHTML = sorted.map((p, i) => `
+                <div class="flex justify-between items-center p-4 bg-slate-800/80 rounded-xl border border-slate-700 font-bold text-sm">
+                    <span class="text-slate-300">#${i + 1} ${p.name}</span>
+                    <span class="text-indigo-400">${p.score} pts</span>
+                </div>
+            `).join('');
+        }
+
+        function nextHostQuestion() {
+            gameState.currentIdx++;
+            if (gameState.currentIdx < gameState.questions.length) {
+                document.getElementById('leaderboardScreen').classList.add('hidden');
+                document.getElementById('hostGameScreen').classList.remove('hidden');
+                renderHostQuestion();
+            } else {
+                alert("Game Over! Final Leaderboard Shown.");
+            }
+        }
+
+        function broadcast(msg) {
+            connections.forEach(c => c.send(msg));
+        }
+
+        // ================= PLAYER LOGIC =================
+        function showJoinScreen() {
+            document.getElementById('modeScreen').classList.add('hidden');
+            document.getElementById('joinScreen').classList.remove('hidden');
+        }
+
+        function joinGame() {
+            const code = document.getElementById('joinRoomCode').value.toUpperCase().trim();
+            const name = document.getElementById('playerName').value.trim();
+
+            if (!code || !name) return alert("Please fill in both fields.");
+
+            peer = new Peer();
+
+            peer.on('open', () => {
+                hostConn = peer.connect(PEER_PREFIX + code);
+
+                hostConn.on('open', () => {
+                    hostConn.send({ type: 'JOIN', name: name });
+                });
+
+                hostConn.on('data', (data) => handlePlayerMessage(data, name));
+            });
+        }
+
+        function handlePlayerMessage(data, name) {
+            if (data.type === 'JOIN_SUCCESS') {
+                document.getElementById('joinScreen').classList.add('hidden');
+                document.getElementById('controllerScreen').classList.remove('hidden');
+                document.getElementById('controllerPlayerName').innerText = name;
+            } else if (data.type === 'NEW_QUESTION') {
+                document.getElementById('controllerStatus').innerText = "Select your answer!";
+                toggleControllerButtons(true);
+            } else if (data.type === 'ROUND_RESULT') {
+                document.getElementById('controllerStatus').innerText = data.correct ? "✅ Correct! (+100)" : "❌ Incorrect!";
+                toggleControllerButtons(false);
+            }
+        }
+
+        function sendAnswer(index) {
+            if (hostConn) {
+                hostConn.send({ type: 'SUBMIT_ANSWER', index: index });
+                document.getElementById('controllerStatus').innerText = "Answer Submitted!";
+                toggleControllerButtons(false);
+            }
+        }
+
+        function toggleControllerButtons(enabled) {
+            const btns = document.querySelectorAll('#controllerButtons button');
+            btns.forEach(b => b.disabled = !enabled);
+        }
+    </script>
+</body>
+</html>
