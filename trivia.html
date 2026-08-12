@@ -37,6 +37,9 @@
             background: rgba(51, 65, 85, 0.85);
             border-color: rgba(99, 102, 241, 0.5);
         }
+        .timer-ring {
+            transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between p-4 md:p-8">
@@ -141,12 +144,24 @@
         <div id="hostGameScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
             <div class="flex justify-between items-center text-xs font-bold text-slate-400 border-b border-slate-700/50 pb-4">
                 <span>Question <span id="currentQNum">1</span>/10</span>
-                <span id="hostStatusBadge" class="text-indigo-400">Waiting for answers...</span>
+                <span id="hostStatusBadge" class="text-indigo-400 uppercase tracking-wider font-extrabold">Live Round</span>
             </div>
 
-            <h2 id="questionText" class="text-xl md:text-2xl font-bold text-white leading-relaxed min-h-[80px]">
-                Loading question...
-            </h2>
+            <!-- Host Timer & Question Header -->
+            <div class="flex flex-col md:flex-row items-center gap-6">
+                <!-- SVG Countdown Circle -->
+                <div class="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path id="timerRing" class="timer-ring text-indigo-500" stroke-width="3.5" stroke-dasharray="100, 100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <span id="timerText" class="absolute font-black text-2xl text-white">30</span>
+                </div>
+
+                <h2 id="questionText" class="text-xl md:text-2xl font-bold text-white leading-relaxed flex-1 text-center md:text-left">
+                    Loading question...
+                </h2>
+            </div>
 
             <div id="optionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <!-- Host displays choices -->
@@ -155,20 +170,54 @@
             <div id="submittedStatus" class="text-center text-xs text-slate-400 font-bold pt-2">
                 Answers received: <span id="answeredCount" class="text-indigo-400">0</span> / <span id="totalPlayersCount">0</span>
             </div>
+
+            <!-- Results Panel (Revealed when time expires) -->
+            <div id="resultsPanel" class="hidden space-y-4 pt-4 border-t border-slate-700/50">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-black text-slate-300 uppercase tracking-wider">Round Results</h3>
+                    <button onclick="showLeaderboard()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white rounded-xl shadow-lg transition-all">
+                        View Standings <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl">
+                        <div class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <i class="fas fa-check-circle"></i> Got It Right
+                        </div>
+                        <div id="correctPlayersList" class="flex flex-wrap gap-1.5 text-xs font-bold text-slate-200 min-h-[24px]">
+                            <span class="text-slate-500 italic text-[11px]">Nobody</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl">
+                        <div class="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <i class="fas fa-times-circle"></i> Got It Wrong / Missed
+                        </div>
+                        <div id="wrongPlayersList" class="flex flex-wrap gap-1.5 text-xs font-bold text-slate-200 min-h-[24px]">
+                            <span class="text-slate-500 italic text-[11px]">Nobody</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Player Controller Screen (Phone Interface) -->
         <div id="controllerScreen" class="hidden glass rounded-3xl p-6 shadow-2xl space-y-6 text-center">
+            <div class="flex justify-between items-center text-xs font-bold text-slate-400 border-b border-slate-700/50 pb-3">
+                <span id="controllerPlayerName">Player</span>
+                <span id="playerTimer" class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full font-mono font-black text-sm">⏱️ 30s</span>
+            </div>
+
             <div>
-                <span id="controllerPlayerName" class="text-xs font-bold text-slate-400">Player</span>
-                <h2 id="controllerStatus" class="text-xl font-bold text-white mt-1">Get Ready!</h2>
+                <h2 id="controllerStatus" class="text-xl font-bold text-white mt-1">Select your answer!</h2>
             </div>
 
             <div id="controllerButtons" class="grid grid-cols-2 gap-4">
-                <button onclick="sendAnswer(0)" class="h-28 bg-indigo-600 active:bg-indigo-700 rounded-2xl font-black text-3xl text-white shadow-lg">A</button>
-                <button onclick="sendAnswer(1)" class="h-28 bg-pink-600 active:bg-pink-700 rounded-2xl font-black text-3xl text-white shadow-lg">B</button>
-                <button onclick="sendAnswer(2)" class="h-28 bg-amber-600 active:bg-amber-700 rounded-2xl font-black text-3xl text-white shadow-lg">C</button>
-                <button onclick="sendAnswer(3)" class="h-28 bg-emerald-600 active:bg-emerald-700 rounded-2xl font-black text-3xl text-white shadow-lg">D</button>
+                <button onclick="sendAnswer(0)" class="h-28 bg-indigo-600 active:bg-indigo-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">A</button>
+                <button onclick="sendAnswer(1)" class="h-28 bg-pink-600 active:bg-pink-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">B</button>
+                <button onclick="sendAnswer(2)" class="h-28 bg-amber-600 active:bg-amber-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">C</button>
+                <button onclick="sendAnswer(3)" class="h-28 bg-emerald-600 active:bg-emerald-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">D</button>
             </div>
         </div>
 
@@ -185,10 +234,13 @@
 
     <script>
         const PEER_PREFIX = "omni_trivia_room_";
+        const QUESTION_TIME = 30; // 30 second countdown
         let peer = null;
         let connections = []; // For Host
         let hostConn = null;  // For Player
         let isHost = false;
+        let timerInterval = null;
+        let timeLeft = QUESTION_TIME;
 
         // Game State
         let gameState = {
@@ -239,12 +291,14 @@
                 updateLobbyUI();
                 conn.send({ type: 'JOIN_SUCCESS', roomCode: gameState.roomCode });
             } else if (data.type === 'SUBMIT_ANSWER') {
-                if (gameState.players[conn.peer] && gameState.players[conn.peer].answered === -1) {
+                if (gameState.players[conn.peer] && gameState.players[conn.peer].answered === -1 && timeLeft > 0) {
                     gameState.players[conn.peer].answered = data.index;
                     gameState.answersReceived++;
                     document.getElementById('answeredCount').innerText = gameState.answersReceived;
 
+                    // If all players submitted early, stop the timer immediately
                     if (gameState.answersReceived >= Object.keys(gameState.players).length) {
+                        clearInterval(timerInterval);
                         evaluateAnswers();
                     }
                 }
@@ -283,47 +337,111 @@
             // Reset player answers
             Object.keys(gameState.players).forEach(k => gameState.players[k].answered = -1);
 
+            document.getElementById('resultsPanel').classList.add('hidden');
             document.getElementById('currentQNum').innerText = gameState.currentIdx + 1;
             document.getElementById('questionText').innerText = q.question;
             document.getElementById('answeredCount').innerText = "0";
             document.getElementById('totalPlayersCount').innerText = Object.keys(gameState.players).length;
 
             document.getElementById('optionsGrid').innerHTML = q.options.map((opt, i) => `
-                <div class="p-4 bg-slate-800 rounded-xl font-bold text-sm text-slate-300 flex items-center gap-3 border border-slate-700">
-                    <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xs">
+                <div id="optionCard-${i}" class="p-4 bg-slate-800 rounded-xl font-bold text-sm text-slate-300 flex items-center gap-3 border border-slate-700 transition-all">
+                    <span id="optionBadge-${i}" class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xs">
                         ${['A','B','C','D'][i]}
                     </span>
-                    <span>${opt}</span>
+                    <span class="flex-1">${opt}</span>
                 </div>
             `).join('');
 
-            // Broadcast question state to phone controllers
-            broadcast({ type: 'NEW_QUESTION', index: gameState.currentIdx });
+            // Broadcast new question start to phone controllers
+            broadcast({ type: 'NEW_QUESTION', index: gameState.currentIdx, duration: QUESTION_TIME });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = QUESTION_TIME;
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                broadcast({ type: 'TIMER_TICK', timeLeft: timeLeft });
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    evaluateAnswers();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            document.getElementById('timerText').innerText = timeLeft;
+            const ring = document.getElementById('timerRing');
+            const percent = (timeLeft / QUESTION_TIME) * 100;
+            ring.style.strokeDashoffset = 100 - percent;
+
+            if (timeLeft <= 5) {
+                ring.setAttribute('class', 'timer-ring text-rose-500');
+            } else if (timeLeft <= 10) {
+                ring.setAttribute('class', 'timer-ring text-amber-500');
+            } else {
+                ring.setAttribute('class', 'timer-ring text-indigo-500');
+            }
         }
 
         function evaluateAnswers() {
             const q = gameState.questions[gameState.currentIdx];
+            const correctList = [];
+            const wrongList = [];
 
-            Object.keys(gameState.players).forEach(k => {
-                const p = gameState.players[k];
-                if (p.answered === q.correct) {
-                    p.score += 100;
+            // Highlight Correct Answer on Host Screen
+            q.options.forEach((_, i) => {
+                const card = document.getElementById(`optionCard-${i}`);
+                if (i === q.correct) {
+                    card.className = "p-4 bg-emerald-500/20 border-2 border-emerald-500 rounded-xl font-bold text-sm text-white flex items-center gap-3 shadow-lg shadow-emerald-500/20";
+                    document.getElementById(`optionBadge-${i}`).className = "w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-black text-xs";
+                } else {
+                    card.className = "p-4 bg-slate-900/40 border border-slate-800 rounded-xl font-bold text-sm text-slate-500 flex items-center gap-3 opacity-50";
                 }
             });
 
-            // Send feedback to controllers
+            // Process Player Answers & Calculate Scores
+            Object.keys(gameState.players).forEach(k => {
+                const p = gameState.players[k];
+                const isCorrect = p.answered === q.correct;
+
+                if (isCorrect) {
+                    p.score += 100;
+                    correctList.push(p.name);
+                } else {
+                    wrongList.push(p.name);
+                }
+            });
+
+            // Update Correct/Wrong Player Breakdown on Host Screen
+            document.getElementById('correctPlayersList').innerHTML = correctList.length > 0
+                ? correctList.map(name => `<span class="px-2 py-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-lg">${name}</span>`).join('')
+                : `<span class="text-slate-500 italic text-[11px]">Nobody</span>`;
+
+            document.getElementById('wrongPlayersList').innerHTML = wrongList.length > 0
+                ? wrongList.map(name => `<span class="px-2 py-1 bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-lg">${name}</span>`).join('')
+                : `<span class="text-slate-500 italic text-[11px]">Nobody</span>`;
+
+            document.getElementById('resultsPanel').classList.remove('hidden');
+
+            // Send Feedback to Controllers
             connections.forEach(conn => {
                 const p = gameState.players[conn.peer];
                 if (p) {
                     conn.send({
                         type: 'ROUND_RESULT',
                         correct: p.answered === q.correct,
-                        score: p.score
+                        score: p.score,
+                        correctOption: ['A','B','C','D'][q.correct]
                     });
                 }
             });
-
-            setTimeout(showLeaderboard, 1500);
         }
 
         function showLeaderboard() {
@@ -387,17 +505,24 @@
                 document.getElementById('controllerPlayerName').innerText = name;
             } else if (data.type === 'NEW_QUESTION') {
                 document.getElementById('controllerStatus').innerText = "Select your answer!";
+                document.getElementById('playerTimer').innerText = `⏱️ ${data.duration}s`;
                 toggleControllerButtons(true);
+            } else if (data.type === 'TIMER_TICK') {
+                document.getElementById('playerTimer').innerText = `⏱️ ${data.timeLeft}s`;
             } else if (data.type === 'ROUND_RESULT') {
-                document.getElementById('controllerStatus').innerText = data.correct ? "✅ Correct! (+100)" : "❌ Incorrect!";
                 toggleControllerButtons(false);
+                if (data.correct) {
+                    document.getElementById('controllerStatus').innerText = "✅ Correct! (+100 pts)";
+                } else {
+                    document.getElementById('controllerStatus').innerText = `❌ Incorrect! (Answer: ${data.correctOption})`;
+                }
             }
         }
 
         function sendAnswer(index) {
             if (hostConn) {
                 hostConn.send({ type: 'SUBMIT_ANSWER', index: index });
-                document.getElementById('controllerStatus').innerText = "Answer Submitted!";
+                document.getElementById('controllerStatus').innerText = "Answer Submitted! Waiting for timer...";
                 toggleControllerButtons(false);
             }
         }
