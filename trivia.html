@@ -166,7 +166,28 @@
             <div class="space-y-3 text-left">
                 <label class="text-xs font-black text-slate-300 uppercase tracking-wider block text-center">Choose Game Category</label>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button onclick="selectCategory('17', this)" class="category-card selected glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('11', this)" class="category-card selected glass-btn p-4 rounded-xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg"><i class="fas fa-film"></i></div>
+                        <div>
+                            <span class="text-sm font-bold text-white block">Movies & Film</span>
+                            <span class="text-[11px] text-slate-400">Blockbusters, Actors & Cinema Trivia</span>
+                        </div>
+                    </button>
+                    <button onclick="selectCategory('12', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-lg"><i class="fas fa-music"></i></div>
+                        <div>
+                            <span class="text-sm font-bold text-white block">Music</span>
+                            <span class="text-[11px] text-slate-400">Hits, Artists, Bands & Pop Culture</span>
+                        </div>
+                    </button>
+                    <button onclick="selectCategory('14', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center text-lg"><i class="fas fa-tv"></i></div>
+                        <div>
+                            <span class="text-sm font-bold text-white block">Television</span>
+                            <span class="text-[11px] text-slate-400">TV Shows, Sitcoms, Series & Characters</span>
+                        </div>
+                    </button>
+                    <button onclick="selectCategory('17', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg"><i class="fas fa-leaf"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Science & Nature</span>
@@ -177,14 +198,14 @@
                         <div class="w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg"><i class="fas fa-network-wired"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Computer IT & Networking</span>
-                            <span class="text-[11px] text-slate-400">Hardware, OS, Networks, Protocols & Security</span>
+                            <span class="text-[11px] text-slate-400">Hardware, OS, Networks & Security</span>
                         </div>
                     </button>
                     <button onclick="selectCategory('25', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg"><i class="fas fa-book-open"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Books, Classics & Paintings</span>
-                            <span class="text-[11px] text-slate-400">Classic Novels, Authors, Fine Art & Sculptures</span>
+                            <span class="text-[11px] text-slate-400">Classic Novels, Authors & Fine Art</span>
                         </div>
                     </button>
                     <button onclick="selectCategory('22', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
@@ -194,7 +215,7 @@
                             <span class="text-[11px] text-slate-400">Countries, Capitals, Maps & Landmarks</span>
                         </div>
                     </button>
-                    <button onclick="selectCategory('any', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3 sm:col-span-2">
+                    <button onclick="selectCategory('any', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center text-lg"><i class="fas fa-random"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">All Categories (Mixed)</span>
@@ -221,7 +242,7 @@
         <div id="hostGameScreen" class="hidden glass rounded-3xl p-6 md:p-10 shadow-2xl space-y-6">
             <div class="flex justify-between items-center text-xs font-bold text-slate-400 border-b border-slate-700/50 pb-4">
                 <span class="flex items-center gap-2">
-                    <span class="px-2.5 py-1 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg text-[11px] font-bold" id="hostCategoryPill">Science & Nature</span>
+                    <span class="px-2.5 py-1 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg text-[11px] font-bold" id="hostCategoryPill">Movies & Film</span>
                     <span>Q <span id="currentQNum">1</span>/10</span>
                 </span>
                 <span id="hostStatusBadge" class="text-indigo-400 uppercase tracking-wider font-extrabold">Live Round</span>
@@ -292,7 +313,7 @@
                     <i class="fas fa-trophy"></i>
                 </div>
                 <h2 class="text-3xl font-black text-white">Game Over - Final Summary!</h2>
-                <p class="text-xs font-bold text-indigo-400 uppercase tracking-widest" id="finalCategoryPlayed">Category: Science & Nature</p>
+                <p class="text-xs font-bold text-indigo-400 uppercase tracking-widest" id="finalCategoryPlayed">Category: Movies & Film</p>
             </div>
 
             <!-- Winner Highlight -->
@@ -337,8 +358,8 @@
         let isHost = false;
         let timerInterval = null;
         let timeLeft = QUESTION_TIME;
-        let selectedCategoryId = '17';
-        let selectedCategoryName = 'Science & Nature';
+        let selectedCategoryId = '11';
+        let selectedCategoryName = 'Movies & Film';
         let selectedDifficulty = 'easy';
 
         let gameState = {
@@ -350,6 +371,21 @@
         };
 
         const LOCAL_QUESTIONS = {
+            '11': [
+                { question: "Which movie won the Academy Award for Best Picture in 1994?", options: ["Pulp Fiction", "Forrest Gump", "The Shawshank Redemption", "The Lion King"], correct: 1 },
+                { question: "Who directed the movie 'Jurassic Park' (1993)?", options: ["James Cameron", "George Lucas", "Steven Spielberg", "Christopher Nolan"], correct: 2 },
+                { question: "What is the highest-grossing film of all time (unadjusted for inflation)?", options: ["Titanic", "Avatar", "Avengers: Endgame", "Star Wars: The Force Awakens"], correct: 1 }
+            ],
+            '12': [
+                { question: "Which English rock band released the iconic 1973 album 'The Dark Side of the Moon'?", options: ["The Beatles", "Led Zeppelin", "Pink Floyd", "The Rolling Stones"], correct: 2 },
+                { question: "Who is known as the 'King of Pop'?", options: ["Elvis Presley", "Michael Jackson", "Prince", "Stevie Wonder"], correct: 1 },
+                { question: "What was the debut single of Britney Spears released in 1998?", options: ["Oops!... I Did It Again", "Toxic", "...Baby One More Time", "Womanizer"], correct: 2 }
+            ],
+            '14': [
+                { question: "In the sitcom 'Friends', what is the name of Joey's stuffed penguin?", options: ["Hugsy", "Waddles", "Pingu", "Pengy"], correct: 0 },
+                { question: "Which fictional city is the primary setting for 'The Simpsons'?", options: ["Quahog", "South Park", "Springfield", "Shelbyville"], correct: 2 },
+                { question: "Who plays the main character Walter White in 'Breaking Bad'?", options: ["Aaron Paul", "Bryan Cranston", "Bob Odenkirk", "Jon Hamm"], correct: 1 }
+            ],
             '17': [
                 { question: "Which chemical element has the symbol 'O'?", options: ["Gold", "Oxygen", "Osmium", "Zinc"], correct: 1 },
                 { question: "How many bones are in the adult human body?", options: ["206", "180", "214", "250"], correct: 0 },
