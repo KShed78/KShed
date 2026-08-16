@@ -30,7 +30,6 @@
             background: rgba(30, 41, 59, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.12);
             transition: all 0.2s ease;
-            touch-action: manipulation;
         }
         .glass-btn:hover:not(:disabled) {
             transform: translateY(-2px);
@@ -92,7 +91,7 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                <button type="button" onclick="initHost()" class="glass-btn p-6 rounded-2xl text-left space-y-3 group border-indigo-500/40 bg-indigo-500/10">
+                <button onclick="initHost()" class="glass-btn p-6 rounded-2xl text-left space-y-3 group border-indigo-500/40 bg-indigo-500/10">
                     <div class="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
                         <i class="fas fa-desktop"></i>
                     </div>
@@ -102,7 +101,7 @@
                     </div>
                 </button>
 
-                <button type="button" onclick="showJoinScreen()" class="glass-btn p-6 rounded-2xl text-left space-y-3 group">
+                <button onclick="showJoinScreen()" class="glass-btn p-6 rounded-2xl text-left space-y-3 group">
                     <div class="w-12 h-12 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
                         <i class="fas fa-mobile-alt"></i>
                     </div>
@@ -124,25 +123,19 @@
             <div class="space-y-4 max-w-sm mx-auto">
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">4-Digit Room Code</label>
-                    <input type="number" id="joinRoomCode" maxlength="4" placeholder="e.g. 8492" oninput="if(this.value.length > 4) this.value = this.value.slice(0,4); clearErrors();"
+                    <input type="number" id="joinRoomCode" maxlength="4" placeholder="e.g. 8492" oninput="if(this.value.length > 4) this.value = this.value.slice(0,4);"
                         class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-2xl font-mono uppercase font-bold text-indigo-400 outline-none focus:ring-2 focus:ring-indigo-500">
-                    <p id="codeError" class="hidden text-xs text-rose-400 font-bold mt-1 text-center"><i class="fas fa-exclamation-circle mr-1"></i> Please enter a valid 4-digit room code.</p>
+                    <p id="codeError" class="hidden text-xs text-rose-400 font-bold mt-1 text-center"><i class="fas fa-exclamation-circle mr-1"></i> Please enter a 4-digit room code.</p>
                 </div>
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Your Name <span class="text-rose-400">*</span></label>
-                    <input type="text" id="playerName" placeholder="Enter your name" oninput="clearErrors()"
+                    <input type="text" id="playerName" placeholder="Enter your name" oninput="clearNameError()"
                         class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                     <p id="nameError" class="hidden text-xs text-rose-400 font-bold mt-1 text-center"><i class="fas fa-exclamation-circle mr-1"></i> Name is required to join the game!</p>
                 </div>
-                
-                <div class="flex gap-2">
-                    <button type="button" onclick="showModeScreen()" class="w-1/3 py-4 glass-btn rounded-xl font-bold text-slate-300 hover:text-white transition-all">
-                        Back
-                    </button>
-                    <button type="button" onclick="joinGame()" id="connectBtn" class="w-2/3 py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-xl font-bold text-white shadow-xl hover:opacity-90 transition-all">
-                        Connect Controller
-                    </button>
-                </div>
+                <button onclick="joinGame()" id="connectBtn" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-xl font-bold text-white shadow-xl hover:opacity-90 transition-all">
+                    Connect Controller
+                </button>
             </div>
         </div>
 
@@ -157,13 +150,13 @@
             <div class="space-y-2 text-left">
                 <label class="text-xs font-black text-slate-300 uppercase tracking-wider block text-center">Select Difficulty</label>
                 <div class="grid grid-cols-3 gap-3">
-                    <button type="button" onclick="selectDifficulty('easy', this)" class="difficulty-card selected glass-btn py-3 rounded-xl text-center">
+                    <button onclick="selectDifficulty('easy', this)" class="difficulty-card selected glass-btn py-3 rounded-xl text-center">
                         <span class="text-sm font-bold text-emerald-400 block"><i class="fas fa-smile mr-1"></i> Easy</span>
                     </button>
-                    <button type="button" onclick="selectDifficulty('medium', this)" class="difficulty-card glass-btn py-3 rounded-xl text-center">
+                    <button onclick="selectDifficulty('medium', this)" class="difficulty-card glass-btn py-3 rounded-xl text-center">
                         <span class="text-sm font-bold text-amber-400 block"><i class="fas fa-bolt mr-1"></i> Hard</span>
                     </button>
-                    <button type="button" onclick="selectDifficulty('hard', this)" class="difficulty-card glass-btn py-3 rounded-xl text-center">
+                    <button onclick="selectDifficulty('hard', this)" class="difficulty-card glass-btn py-3 rounded-xl text-center">
                         <span class="text-sm font-bold text-rose-400 block"><i class="fas fa-skull mr-1"></i> Difficult</span>
                     </button>
                 </div>
@@ -173,63 +166,63 @@
             <div class="space-y-3 text-left">
                 <label class="text-xs font-black text-slate-300 uppercase tracking-wider block text-center">Choose Game Category</label>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button type="button" onclick="selectCategory('11', this)" class="category-card selected glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('11', this)" class="category-card selected glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg"><i class="fas fa-film"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Movies & Film</span>
                             <span class="text-[11px] text-slate-400">Blockbusters, Actors & Cinema Trivia</span>
                         </div>
                     </button>
-                    <button type="button" onclick="selectCategory('12', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('12', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-lg"><i class="fas fa-music"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Music</span>
                             <span class="text-[11px] text-slate-400">Hits, Artists, Bands & Pop Culture</span>
                         </div>
                     </button>
-                    <button type="button" onclick="selectCategory('14', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('14', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center text-lg"><i class="fas fa-tv"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Television</span>
                             <span class="text-[11px] text-slate-400">TV Shows, Sitcoms, Series & Characters</span>
                         </div>
                     </button>
-                    <button type="button" onclick="selectCategory('17', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('17', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg"><i class="fas fa-leaf"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Science & Nature</span>
                             <span class="text-[11px] text-slate-400">Biology, Physics, Chemistry & Earth</span>
                         </div>
                     </button>
-                    <button type="button" onclick="selectCategory('18', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('18', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg"><i class="fas fa-network-wired"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Computer IT & Networking</span>
                             <span class="text-[11px] text-slate-400">Hardware, OS, Networks & Security</span>
                         </div>
                     </button>
-                    <button type="button" onclick="selectCategory('10', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('10', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg"><i class="fas fa-book-open"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Books & Literature</span>
                             <span class="text-[11px] text-slate-400">Classic Novels, Authors & Literature</span>
                         </div>
                     </button>
-                    <button type="button" onclick="selectCategory('25', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('25', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center text-lg"><i class="fas fa-palette"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Art & Paintings</span>
                             <span class="text-[11px] text-slate-400">Famous Paintings, Artists & Fine Art</span>
                         </div>
                     </button>
-                    <button type="button" onclick="selectCategory('22', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('22', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg"><i class="fas fa-globe-americas"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">Geography</span>
                             <span class="text-[11px] text-slate-400">Countries, Capitals, Maps & Landmarks</span>
                         </div>
                     </button>
-                    <button type="button" onclick="selectCategory('any', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('any', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg"><i class="fas fa-random"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">All Categories (Mixed)</span>
@@ -247,7 +240,7 @@
                 </div>
             </div>
 
-            <button type="button" id="startHostBtn" onclick="startHostGame()" disabled class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl opacity-50 cursor-not-allowed transition-all">
+            <button id="startHostBtn" onclick="startHostGame()" disabled class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl opacity-50 cursor-not-allowed transition-all">
                 Start Game
             </button>
         </div>
@@ -295,7 +288,7 @@
 
             <!-- Round Results Panel -->
             <div id="resultsPanel" class="hidden space-y-4 pt-4 border-t border-slate-700/50">
-                <button type="button" onclick="nextHostQuestion()" id="nextQBtn" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all text-base flex items-center justify-center gap-2">
+                <button onclick="nextHostQuestion()" id="nextQBtn" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all text-base flex items-center justify-center gap-2">
                     <span>Next Question</span> <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -313,10 +306,10 @@
             </div>
 
             <div id="controllerButtons" class="grid grid-cols-2 gap-4">
-                <button type="button" onclick="sendAnswer(0)" class="h-28 bg-indigo-600 active:bg-indigo-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">A</button>
-                <button type="button" onclick="sendAnswer(1)" class="h-28 bg-pink-600 active:bg-pink-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">B</button>
-                <button type="button" onclick="sendAnswer(2)" class="h-28 bg-amber-600 active:bg-amber-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">C</button>
-                <button type="button" onclick="sendAnswer(3)" class="h-28 bg-emerald-600 active:bg-emerald-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">D</button>
+                <button onclick="sendAnswer(0)" class="h-28 bg-indigo-600 active:bg-indigo-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">A</button>
+                <button onclick="sendAnswer(1)" class="h-28 bg-pink-600 active:bg-pink-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">B</button>
+                <button onclick="sendAnswer(2)" class="h-28 bg-amber-600 active:bg-amber-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">C</button>
+                <button onclick="sendAnswer(3)" class="h-28 bg-emerald-600 active:bg-emerald-700 rounded-2xl font-black text-3xl text-white shadow-lg disabled:opacity-40">D</button>
             </div>
         </div>
 
@@ -345,7 +338,7 @@
             </div>
 
             <!-- Pick New Game Button -->
-            <button type="button" onclick="pickNewGame()" class="w-full py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 text-lg">
+            <button onclick="pickNewGame()" class="w-full py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 text-lg">
                 <i class="fas fa-redo"></i> Pick New Game
             </button>
         </div>
@@ -430,23 +423,6 @@
             ]
         };
 
-        // Navigation helpers
-        function showJoinScreen() {
-            document.getElementById('modeScreen').classList.add('hidden');
-            document.getElementById('joinScreen').classList.remove('hidden');
-            clearErrors();
-        }
-
-        function showModeScreen() {
-            document.getElementById('joinScreen').classList.add('hidden');
-            document.getElementById('modeScreen').classList.remove('hidden');
-        }
-
-        function clearErrors() {
-            document.getElementById('codeError').classList.add('hidden');
-            document.getElementById('nameError').classList.add('hidden');
-        }
-
         function selectCategory(id, btnElement) {
             selectedCategoryId = id;
             document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
@@ -530,29 +506,6 @@
             });
         }
 
-        function updateLobbyUI() {
-            const playerList = document.getElementById('playerList');
-            const playerCount = document.getElementById('playerCount');
-            const startBtn = document.getElementById('startHostBtn');
-
-            const players = Object.values(gameState.players);
-            playerCount.innerText = players.length;
-
-            if (players.length === 0) {
-                playerList.innerHTML = '<p class="text-xs text-slate-500 self-center">Waiting for devices to connect...</p>';
-                startBtn.disabled = true;
-                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                playerList.innerHTML = players.map(p => 
-                    `<span class="px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-bold rounded-lg text-xs flex items-center gap-1.5">
-                        <i class="fas fa-mobile-alt text-[10px]"></i> ${p.name}
-                     </span>`
-                ).join('');
-                startBtn.disabled = false;
-                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        }
-
         function handleHostMessage(conn, data) {
             if (data.type === 'JOIN') {
                 gameState.players[conn.peer] = { 
@@ -589,82 +542,6 @@
             delete gameState.players[peerId];
             connections = connections.filter(c => c.peer !== peerId);
             updateLobbyUI();
-        }
-
-        // ================= PLAYER (JOIN) LOGIC =================
-        function joinGame() {
-            const roomCode = document.getElementById('joinRoomCode').value.trim();
-            const playerName = document.getElementById('playerName').value.trim();
-            
-            let hasError = false;
-            if (!roomCode || roomCode.length !== 4) {
-                document.getElementById('codeError').classList.remove('hidden');
-                hasError = true;
-            }
-            if (!playerName) {
-                document.getElementById('nameError').classList.remove('hidden');
-                hasError = true;
-            }
-            
-            if (hasError) return;
-
-            const connectBtn = document.getElementById('connectBtn');
-            connectBtn.disabled = true;
-            connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Connecting...';
-
-            peer = new Peer(PEER_CONFIG);
-
-            peer.on('open', (id) => {
-                const targetHostId = PEER_PREFIX + roomCode;
-                hostConn = peer.connect(targetHostId);
-
-                hostConn.on('open', () => {
-                    hostConn.send({ type: 'JOIN', name: playerName });
-                });
-
-                hostConn.on('data', (data) => handlePlayerMessage(data, playerName));
-
-                hostConn.on('error', (err) => {
-                    alert('Could not connect to room. Please double-check the code.');
-                    resetConnectBtn();
-                });
-            });
-
-            peer.on('error', (err) => {
-                alert('Connection error: ' + err.message);
-                resetConnectBtn();
-            });
-        }
-
-        function resetConnectBtn() {
-            const connectBtn = document.getElementById('connectBtn');
-            connectBtn.disabled = false;
-            connectBtn.innerText = 'Connect Controller';
-        }
-
-        function handlePlayerMessage(data, playerName) {
-            if (data.type === 'JOIN_SUCCESS') {
-                document.getElementById('joinScreen').classList.add('hidden');
-                document.getElementById('controllerScreen').classList.remove('hidden');
-                document.getElementById('controllerPlayerName').innerText = playerName;
-                document.getElementById('controllerStatus').innerText = 'Connected! Waiting for host to start...';
-                
-                // Disable controller buttons until question starts
-                setControllerButtonsState(false);
-            }
-        }
-
-        function setControllerButtonsState(enabled) {
-            const btns = document.querySelectorAll('#controllerButtons button');
-            btns.forEach(btn => btn.disabled = !enabled);
-        }
-
-        function sendAnswer(index) {
-            if (hostConn) {
-                hostConn.send({ type: 'SUBMIT_ANSWER', index: index });
-                setControllerButtonsState(false);
-                document.getElementById('controllerStatus').innerText = 'Answer Submitted!';
-            }
         }
     </script>
 </body>
