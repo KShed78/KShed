@@ -36,11 +36,11 @@
             background: rgba(51, 65, 85, 0.85);
             border-color: rgba(99, 102, 241, 0.5);
         }
-        .category-card {
+        .category-card, .difficulty-card {
             border: 2px solid rgba(255, 255, 255, 0.1);
             transition: all 0.2s ease;
         }
-        .category-card.selected {
+        .category-card.selected, .difficulty-card.selected {
             border-color: #6366f1;
             background: rgba(99, 102, 241, 0.2);
             box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
@@ -146,6 +146,22 @@
                 <div id="lobbyRoomCode" class="text-5xl font-mono font-black text-indigo-400 tracking-widest">----</div>
             </div>
 
+            <!-- Difficulty Selection -->
+            <div class="space-y-2 text-left">
+                <label class="text-xs font-black text-slate-300 uppercase tracking-wider block text-center">Select Difficulty</label>
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="selectDifficulty('easy', this)" class="difficulty-card selected glass-btn py-3 rounded-xl text-center">
+                        <span class="text-sm font-bold text-emerald-400 block"><i class="fas fa-smile mr-1"></i> Easy</span>
+                    </button>
+                    <button onclick="selectDifficulty('medium', this)" class="difficulty-card glass-btn py-3 rounded-xl text-center">
+                        <span class="text-sm font-bold text-amber-400 block"><i class="fas fa-bolt mr-1"></i> Hard</span>
+                    </button>
+                    <button onclick="selectDifficulty('hard', this)" class="difficulty-card glass-btn py-3 rounded-xl text-center">
+                        <span class="text-sm font-bold text-rose-400 block"><i class="fas fa-skull mr-1"></i> Difficult</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Categories -->
             <div class="space-y-3 text-left">
                 <label class="text-xs font-black text-slate-300 uppercase tracking-wider block text-center">Choose Game Category</label>
@@ -158,17 +174,17 @@
                         </div>
                     </button>
                     <button onclick="selectCategory('18', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg"><i class="fas fa-microchip"></i></div>
+                        <div class="w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg"><i class="fas fa-network-wired"></i></div>
                         <div>
-                            <span class="text-sm font-bold text-white block">Technology</span>
-                            <span class="text-[11px] text-slate-400">Computers, AI, Gadgets & Code</span>
+                            <span class="text-sm font-bold text-white block">Computer IT & Networking</span>
+                            <span class="text-[11px] text-slate-400">Hardware, OS, Networks, Protocols & Security</span>
                         </div>
                     </button>
                     <button onclick="selectCategory('25', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg"><i class="fas fa-palette"></i></div>
+                        <div class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg"><i class="fas fa-book-open"></i></div>
                         <div>
-                            <span class="text-sm font-bold text-white block">Arts & Literature</span>
-                            <span class="text-[11px] text-slate-400">Paintings, Books, Theater & Classics</span>
+                            <span class="text-sm font-bold text-white block">Books, Classics & Paintings</span>
+                            <span class="text-[11px] text-slate-400">Classic Novels, Authors, Fine Art & Sculptures</span>
                         </div>
                     </button>
                     <button onclick="selectCategory('22', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
@@ -219,7 +235,7 @@
                         <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                         <path id="timerRing" class="timer-ring text-indigo-500" stroke-width="3.5" stroke-dasharray="100, 100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                     </svg>
-                    <span id="timerText" class="absolute font-black text-2xl text-white">15</span>
+                    <span id="timerText" class="absolute font-black text-2xl text-white">30</span>
                 </div>
 
                 <h2 id="questionText" class="text-xl md:text-2xl font-bold text-white leading-relaxed flex-1 text-center md:text-left">
@@ -244,7 +260,6 @@
 
             <!-- Round Results Panel -->
             <div id="resultsPanel" class="hidden space-y-4 pt-4 border-t border-slate-700/50">
-                <!-- Next Question Button -->
                 <button onclick="nextHostQuestion()" id="nextQBtn" class="w-full py-4 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl font-black text-white shadow-xl hover:opacity-90 transition-all text-base flex items-center justify-center gap-2">
                     <span>Next Question</span> <i class="fas fa-arrow-right"></i>
                 </button>
@@ -255,7 +270,7 @@
         <div id="controllerScreen" class="hidden glass rounded-3xl p-6 shadow-2xl space-y-6 text-center">
             <div class="flex justify-between items-center text-xs font-bold text-slate-400 border-b border-slate-700/50 pb-3">
                 <span id="controllerPlayerName">Player</span>
-                <span id="playerTimer" class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full font-mono font-black text-sm">⏱️ 15s</span>
+                <span id="playerTimer" class="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full font-mono font-black text-sm">⏱️ 30s</span>
             </div>
 
             <div>
@@ -304,7 +319,7 @@
 
     <script>
         const PEER_PREFIX = "kshed_trivia_room_";
-        const QUESTION_TIME = 15;
+        const QUESTION_TIME = 30; // 30 seconds timer
         
         const PEER_CONFIG = {
             config: {
@@ -324,6 +339,7 @@
         let timeLeft = QUESTION_TIME;
         let selectedCategoryId = '17';
         let selectedCategoryName = 'Science & Nature';
+        let selectedDifficulty = 'easy';
 
         let gameState = {
             roomCode: "",
@@ -340,12 +356,14 @@
                 { question: "What is the hardest natural substance on Earth?", options: ["Quartz", "Granite", "Diamond", "Titanium"], correct: 2 }
             ],
             '18': [
-                { question: "Which company created the Java programming language?", options: ["Sun Microsystems", "Microsoft", "Apple", "Google"], correct: 0 },
-                { question: "What does CPU stand for?", options: ["Central Processing Unit", "Computer Personal Unit", "Central Power User", "Control Process Unit"], correct: 0 }
+                { question: "Which network protocol is primarily used for securely transferring web pages?", options: ["HTTPS", "FTP", "SSH", "SMTP"], correct: 0 },
+                { question: "What default port number is used by HTTP?", options: ["80", "443", "21", "22"], correct: 0 },
+                { question: "What type of address is 192.168.1.1?", options: ["MAC Address", "IPv4 Address", "IPv6 Address", "Subnet Mask"], correct: 1 }
             ],
             '25': [
                 { question: "Who painted 'Girl with a Pearl Earring'?", options: ["da Vinci", "Monet", "Johannes Vermeer", "van Gogh"], correct: 2 },
-                { question: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "William Shakespeare", "Mark Twain", "Jane Austen"], correct: 1 }
+                { question: "Who wrote the classic novel 'Moby-Dick'?", options: ["Herman Melville", "William Shakespeare", "Mark Twain", "Jane Austen"], correct: 0 },
+                { question: "Which epic poem was written by Homer detailing Odysseus' journey?", options: ["The Odyssey", "The Iliad", "Aeneid", "Paradise Lost"], correct: 0 }
             ],
             '22': [
                 { question: "What is the capital city of Australia?", options: ["Sydney", "Melbourne", "Canberra", "Brisbane"], correct: 2 },
@@ -364,6 +382,12 @@
             selectedCategoryName = btnElement.querySelector('span').innerText;
         }
 
+        function selectDifficulty(level, btnElement) {
+            selectedDifficulty = level;
+            document.querySelectorAll('.difficulty-card').forEach(d => d.classList.remove('selected'));
+            btnElement.classList.add('selected');
+        }
+
         function generateRoomCode() {
             return Math.floor(1000 + Math.random() * 9000).toString();
         }
@@ -375,7 +399,7 @@
         }
 
         async function fetchQuestions() {
-            let url = `https://opentdb.com/api.php?amount=10&type=multiple`;
+            let url = `https://opentdb.com/api.php?amount=10&type=multiple&difficulty=${selectedDifficulty}`;
             if (selectedCategoryId !== 'any') url += `&category=${selectedCategoryId}`;
 
             try {
@@ -510,7 +534,7 @@
 
             document.getElementById('hostLobbyScreen').classList.add('hidden');
             document.getElementById('hostGameScreen').classList.remove('hidden');
-            document.getElementById('hostCategoryPill').innerText = selectedCategoryName;
+            document.getElementById('hostCategoryPill').innerText = `${selectedCategoryName} (${selectedDifficulty.toUpperCase()})`;
             
             renderHostQuestion();
         }
@@ -570,11 +594,11 @@
                 } else {
                     const hasAnswered = p.answered !== -1;
                     return hasAnswered
-                        ? `<div class="px-3 py-1.5 bg-indigo-500/30 border border-indigo-400 rounded-xl font-bold text-xs text-indigo-200 flex items-center gap-1.5">
-                            <i class="fas fa-check text-indigo-400"></i> ${p.name} <span class="text-[10px] text-indigo-300 uppercase">(Submitted)</span>
+                        ? `<div class="px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/40 rounded-xl font-bold text-xs text-indigo-300 flex items-center gap-1.5">
+                            <i class="fas fa-check text-indigo-400"></i> ${p.name}
                            </div>`
-                        : `<div class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl font-bold text-xs text-slate-400 flex items-center gap-1.5 opacity-60">
-                            <i class="fas fa-spinner fa-spin text-slate-500"></i> ${p.name} <span class="text-[10px] uppercase">(Thinking)</span>
+                        : `<div class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl font-bold text-xs text-slate-400 flex items-center gap-1.5">
+                            <i class="fas fa-hourglass-half text-slate-500"></i> ${p.name}
                            </div>`;
                 }
             }).join('');
@@ -583,11 +607,22 @@
         function startTimer() {
             clearInterval(timerInterval);
             timeLeft = QUESTION_TIME;
-            updateTimerDisplay();
+            
+            const timerRing = document.getElementById('timerRing');
+            const timerText = document.getElementById('timerText');
+            
+            timerText.innerText = timeLeft;
+            if (timerRing) timerRing.style.strokeDashoffset = '0';
 
             timerInterval = setInterval(() => {
                 timeLeft--;
-                updateTimerDisplay();
+                if (timerText) timerText.innerText = timeLeft;
+                
+                if (timerRing) {
+                    const offset = 100 - (timeLeft / QUESTION_TIME) * 100;
+                    timerRing.style.strokeDashoffset = offset.toString();
+                }
+
                 broadcast({ type: 'TIMER_TICK', timeLeft: timeLeft });
 
                 if (timeLeft <= 0) {
@@ -597,33 +632,8 @@
             }, 1000);
         }
 
-        function updateTimerDisplay() {
-            document.getElementById('timerText').innerText = timeLeft;
-            const ring = document.getElementById('timerRing');
-            const percent = (timeLeft / QUESTION_TIME) * 100;
-            ring.style.strokeDashoffset = 100 - percent;
-
-            if (timeLeft <= 5) {
-                ring.setAttribute('class', 'timer-ring text-rose-500');
-            } else if (timeLeft <= 10) {
-                ring.setAttribute('class', 'timer-ring text-amber-500');
-            } else {
-                ring.setAttribute('class', 'timer-ring text-indigo-500');
-            }
-        }
-
         function evaluateAnswers() {
             const q = gameState.questions[gameState.currentIdx];
-
-            q.options.forEach((_, i) => {
-                const card = document.getElementById(`optionCard-${i}`);
-                if (i === q.correct) {
-                    card.className = "p-4 bg-emerald-500/20 border-2 border-emerald-500 rounded-xl font-bold text-sm text-white flex items-center gap-3 shadow-lg shadow-emerald-500/20";
-                    document.getElementById(`optionBadge-${i}`).className = "w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-black text-xs";
-                } else {
-                    card.className = "p-4 bg-slate-900/40 border border-slate-800 rounded-xl font-bold text-sm text-slate-500 flex items-center gap-3 opacity-50";
-                }
-            });
 
             Object.keys(gameState.players).forEach(k => {
                 const p = gameState.players[k];
@@ -635,83 +645,60 @@
                 }
             });
 
-            // Reveal Right/Wrong statuses live on connected device list
-            updateLiveDeviceStatuses(true);
-
-            document.getElementById('resultsPanel').classList.remove('hidden');
-
-            connections.forEach(conn => {
-                const p = gameState.players[conn.peer];
-                if (p) {
-                    conn.send({
-                        type: 'ROUND_RESULT',
-                        correct: p.answered === q.correct,
-                        score: p.score,
-                        correctOption: ['A','B','C','D'][q.correct]
-                    });
+            q.options.forEach((_, i) => {
+                const card = document.getElementById(`optionCard-${i}`);
+                if (i === q.correct) {
+                    card.className = "p-4 bg-emerald-500/20 border-2 border-emerald-500 rounded-xl font-bold text-sm text-emerald-200 flex items-center gap-3";
+                } else {
+                    card.className = "p-4 bg-slate-800/40 border border-slate-800 rounded-xl font-bold text-sm text-slate-500 opacity-60 flex items-center gap-3";
                 }
+            });
+
+            updateLiveDeviceStatuses(true);
+            document.getElementById('resultsPanel').classList.remove('hidden');
+            
+            broadcast({ 
+                type: 'ROUND_RESULTS', 
+                correctIndex: q.correct 
             });
         }
 
         function nextHostQuestion() {
             gameState.currentIdx++;
-            if (gameState.currentIdx < gameState.questions.length) {
-                renderHostQuestion();
+            if (gameState.currentIdx >= gameState.questions.length) {
+                showFinalSummary();
             } else {
-                showFinalStats();
+                renderHostQuestion();
             }
         }
 
-        function showFinalStats() {
+        function showFinalSummary() {
             document.getElementById('hostGameScreen').classList.add('hidden');
             document.getElementById('finalStatsScreen').classList.remove('hidden');
-            document.getElementById('finalCategoryPlayed').innerText = `Category: ${selectedCategoryName}`;
+            document.getElementById('finalCategoryPlayed').innerText = `Category: ${selectedCategoryName} (${selectedDifficulty.toUpperCase()})`;
 
-            const sortedPlayers = Object.values(gameState.players).sort((a, b) => b.score - a.score);
-            const winner = sortedPlayers[0];
-
-            if (winner) {
-                document.getElementById('winnerText').innerText = `${winner.name} (${winner.score} pts)`;
-                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+            const playersArr = Object.values(gameState.players).sort((a, b) => b.score - a.score);
+            
+            if (playersArr.length > 0) {
+                document.getElementById('winnerText').innerText = `${playersArr[0].name} (${playersArr[0].score} pts)`;
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
             }
 
-            const totalQ = gameState.questions.length;
-            const statsContainer = document.getElementById('playerStatsList');
-
-            statsContainer.innerHTML = sortedPlayers.map((p, idx) => {
-                const accPct = Math.round((p.correctAnswers / totalQ) * 100) || 0;
-                return `
-                    <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-2">
-                        <div class="flex justify-between items-center font-bold text-sm">
-                            <span class="text-white text-base flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-lg ${idx === 0 ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'} flex items-center justify-center text-xs font-black">#${idx + 1}</span>
-                                ${p.name}
-                            </span>
-                            <span class="text-indigo-400 font-extrabold text-base">${p.score} pts</span>
-                        </div>
-                        
-                        <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold pt-1">
-                            <div class="p-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl">
-                                <div class="text-[10px] text-slate-400 uppercase">Right</div>
-                                <div class="text-lg font-black">${p.correctAnswers}</div>
-                            </div>
-                            <div class="p-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl">
-                                <div class="text-[10px] text-slate-400 uppercase">Wrong</div>
-                                <div class="text-lg font-black">${p.wrongAnswers}</div>
-                            </div>
-                            <div class="p-2 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-xl">
-                                <div class="text-[10px] text-slate-400 uppercase">Accuracy</div>
-                                <div class="text-lg font-black">${accPct}%</div>
-                            </div>
-                        </div>
-
-                        <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden flex">
-                            <div class="bg-emerald-500 h-full" style="width: ${(p.correctAnswers / totalQ) * 100}%"></div>
-                            <div class="bg-rose-500 h-full" style="width: ${(p.wrongAnswers / totalQ) * 100}%"></div>
+            const statsList = document.getElementById('playerStatsList');
+            statsList.innerHTML = playersArr.map((p, idx) => `
+                <div class="p-4 glass rounded-2xl flex items-center justify-between border border-slate-700/50">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl ${idx === 0 ? 'bg-amber-400 text-slate-900' : 'bg-slate-800 text-slate-300'} font-black text-sm flex items-center justify-center">
+                            #${idx + 1}
+                        </span>
+                        <div>
+                            <h4 class="font-bold text-white text-sm">${p.name}</h4>
+                            <p class="text-[11px] text-slate-400">${p.correctAnswers} Correct / ${p.wrongAnswers} Wrong</p>
                         </div>
                     </div>
-                `;
-            }).join('');
+                    <span class="font-black text-indigo-400 text-lg">${p.score} pts</span>
+                </div>
+            `).join('');
 
             broadcast({ type: 'GAME_OVER' });
         }
@@ -720,113 +707,91 @@
             document.getElementById('finalStatsScreen').classList.add('hidden');
             document.getElementById('hostLobbyScreen').classList.remove('hidden');
             document.getElementById('startHostBtn').innerText = "Start Game";
-            updateLobbyUI();
         }
 
         function broadcast(msg) {
-            connections.forEach(c => c.send(msg));
+            connections.forEach(conn => {
+                if (conn.open) conn.send(msg);
+            });
         }
 
-        // ================= PLAYER LOGIC =================
+        // ================= CONTROLLER / PLAYER LOGIC =================
         function showJoinScreen() {
             document.getElementById('modeScreen').classList.add('hidden');
             document.getElementById('joinScreen').classList.remove('hidden');
         }
 
         function clearNameError() {
-            const nameInput = document.getElementById('playerName');
-            nameInput.classList.remove('border-rose-500', 'ring-2', 'ring-rose-500/50');
             document.getElementById('nameError').classList.add('hidden');
         }
 
         function joinGame() {
-            const codeInput = document.getElementById('joinRoomCode');
-            const nameInput = document.getElementById('playerName');
-            const btn = document.getElementById('connectBtn');
-            const code = codeInput.value.trim();
-            const name = nameInput.value.trim();
-            
-            let hasError = false;
+            const code = document.getElementById('joinRoomCode').value.trim();
+            const name = document.getElementById('playerName').value.trim();
 
-            if (!code || code.length !== 4) {
+            if (code.length !== 4) {
                 document.getElementById('codeError').classList.remove('hidden');
-                codeInput.classList.add('border-rose-500');
-                hasError = true;
+                return;
             } else {
                 document.getElementById('codeError').classList.add('hidden');
-                codeInput.classList.remove('border-rose-500');
             }
 
             if (!name) {
                 document.getElementById('nameError').classList.remove('hidden');
-                nameInput.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/50');
-                nameInput.focus();
-                hasError = true;
-            } else {
-                clearNameError();
+                return;
             }
 
-            if (hasError) return;
-
-            btn.innerText = "Connecting...";
-            btn.disabled = true;
+            document.getElementById('connectBtn').innerText = "Connecting...";
 
             peer = new Peer(PEER_CONFIG);
 
             peer.on('open', () => {
-                const targetPeerId = PEER_PREFIX + code;
-                hostConn = peer.connect(targetPeerId, { reliable: true });
+                hostConn = peer.connect(PEER_PREFIX + code);
 
                 hostConn.on('open', () => {
                     hostConn.send({ type: 'JOIN', name: name });
                 });
 
-                hostConn.on('data', (data) => handlePlayerMessage(data, name));
-
-                hostConn.on('error', (err) => {
-                    console.error('Connection error:', err);
-                    alert("Could not connect to host. Please verify the 4-digit room code.");
-                    btn.innerText = "Connect Controller";
-                    btn.disabled = false;
+                hostConn.on('data', (data) => handleControllerMessage(data, name));
+                
+                hostConn.on('close', () => {
+                    alert("Disconnected from host room.");
+                    location.reload();
                 });
             });
 
             peer.on('error', (err) => {
-                console.error('PeerJS Client Error:', err);
-                alert("Connection failed. Please check your room code and try again.");
-                btn.innerText = "Connect Controller";
-                btn.disabled = false;
+                console.error("Peer JS Controller Error:", err);
+                alert("Could not connect to room code. Ensure the host is running.");
+                document.getElementById('connectBtn').innerText = "Connect Controller";
             });
         }
 
-        function handlePlayerMessage(data, name) {
+        function handleControllerMessage(data, name) {
             if (data.type === 'JOIN_SUCCESS') {
                 document.getElementById('joinScreen').classList.add('hidden');
                 document.getElementById('controllerScreen').classList.remove('hidden');
                 document.getElementById('controllerPlayerName').innerText = name;
+                document.getElementById('controllerStatus').innerText = "Waiting for round to start...";
+                toggleControllerButtons(false);
             } else if (data.type === 'NEW_QUESTION') {
                 document.getElementById('controllerStatus').innerText = "Select your answer!";
-                document.getElementById('playerTimer').innerText = `⏱️ ${data.duration}s`;
                 toggleControllerButtons(true);
             } else if (data.type === 'TIMER_TICK') {
                 document.getElementById('playerTimer').innerText = `⏱️ ${data.timeLeft}s`;
-            } else if (data.type === 'ROUND_RESULT') {
+            } else if (data.type === 'ROUND_RESULTS') {
+                document.getElementById('controllerStatus').innerText = "Round over! Look at host display.";
                 toggleControllerButtons(false);
-                if (data.correct) {
-                    document.getElementById('controllerStatus').innerText = "✅ Correct! (+100 pts)";
-                } else {
-                    document.getElementById('controllerStatus').innerText = `❌ Incorrect! (Answer: ${data.correctOption})`;
-                }
             } else if (data.type === 'GAME_OVER') {
-                document.getElementById('controllerStatus').innerText = "🏁 Game Over! Look at the main screen for stats.";
+                document.getElementById('controllerStatus').innerText = "Game finished! Look at main screen.";
                 toggleControllerButtons(false);
             }
         }
 
         function sendAnswer(index) {
-            if (hostConn) {
+            if (hostConn && hostConn.open) {
                 hostConn.send({ type: 'SUBMIT_ANSWER', index: index });
-                document.getElementById('controllerStatus').innerText = "Answer Submitted! Waiting for host...";
+                document.getElementById('controllerStatus').innerText = "Answer submitted! Waiting for others...";
                 toggleControllerButtons(false);
             }
         }
