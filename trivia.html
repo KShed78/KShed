@@ -201,18 +201,11 @@
                             <span class="text-[11px] text-slate-400">Hardware, OS, Networks & Security</span>
                         </div>
                     </button>
-                    <button onclick="selectCategory('10', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
+                    <button onclick="selectCategory('25', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg"><i class="fas fa-book-open"></i></div>
                         <div>
-                            <span class="text-sm font-bold text-white block">Books & Literature</span>
-                            <span class="text-[11px] text-slate-400">Classic Novels, Authors & Literature</span>
-                        </div>
-                    </button>
-                    <button onclick="selectCategory('25', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center text-lg"><i class="fas fa-palette"></i></div>
-                        <div>
-                            <span class="text-sm font-bold text-white block">Art & Paintings</span>
-                            <span class="text-[11px] text-slate-400">Famous Paintings, Artists & Fine Art</span>
+                            <span class="text-sm font-bold text-white block">Books, Classics & Paintings</span>
+                            <span class="text-[11px] text-slate-400">Classic Novels, Authors & Fine Art</span>
                         </div>
                     </button>
                     <button onclick="selectCategory('22', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
@@ -223,7 +216,7 @@
                         </div>
                     </button>
                     <button onclick="selectCategory('any', this)" class="category-card glass-btn p-4 rounded-xl flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center text-lg"><i class="fas fa-random"></i></div>
+                        <div class="w-10 h-10 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center text-lg"><i class="fas fa-random"></i></div>
                         <div>
                             <span class="text-sm font-bold text-white block">All Categories (Mixed)</span>
                             <span class="text-[11px] text-slate-400">A mix of all topics in one game</span>
@@ -403,15 +396,10 @@
                 { question: "What default port number is used by HTTP?", options: ["80", "443", "21", "22"], correct: 0 },
                 { question: "What type of address is 192.168.1.1?", options: ["MAC Address", "IPv4 Address", "IPv6 Address", "Subnet Mask"], correct: 1 }
             ],
-            '10': [
-                { question: "Who wrote the classic novel 'Moby-Dick'?", options: ["Herman Melville", "William Shakespeare", "Mark Twain", "Jane Austen"], correct: 0 },
-                { question: "Which epic poem was written by Homer detailing Odysseus' journey?", options: ["The Odyssey", "The Iliad", "Aeneid", "Paradise Lost"], correct: 0 },
-                { question: "Which play features the famous line 'To be, or not to be'?", options: ["Macbeth", "Hamlet", "Othello", "Romeo and Juliet"], correct: 1 }
-            ],
             '25': [
                 { question: "Who painted 'Girl with a Pearl Earring'?", options: ["da Vinci", "Monet", "Johannes Vermeer", "van Gogh"], correct: 2 },
-                { question: "Which artist painted the ceiling of the Sistine Chapel?", options: ["Michelangelo", "Leonardo da Vinci", "Raphael", "Donatello"], correct: 0 },
-                { question: "Who created the famous artwork 'The Starry Night'?", options: ["Pablo Picasso", "Claude Monet", "Vincent van Gogh", "Salvador Dalí"], correct: 2 }
+                { question: "Who wrote the classic novel 'Moby-Dick'?", options: ["Herman Melville", "William Shakespeare", "Mark Twain", "Jane Austen"], correct: 0 },
+                { question: "Which epic poem was written by Homer detailing Odysseus' journey?", options: ["The Odyssey", "The Iliad", "Aeneid", "Paradise Lost"], correct: 0 }
             ],
             '22': [
                 { question: "What is the capital city of Australia?", options: ["Sydney", "Melbourne", "Canberra", "Brisbane"], correct: 2 },
@@ -542,6 +530,311 @@
             delete gameState.players[peerId];
             connections = connections.filter(c => c.peer !== peerId);
             updateLobbyUI();
+            if (!document.getElementById('hostGameScreen').classList.contains('hidden')) {
+                updateLiveDeviceStatuses();
+            }
+        }
+
+        function updateLobbyUI() {
+            const list = document.getElementById('playerList');
+            const pKeys = Object.keys(gameState.players);
+            document.getElementById('playerCount').innerText = pKeys.length;
+
+            if (pKeys.length > 0) {
+                list.innerHTML = pKeys.map(k => `
+                    <div class="px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/40 rounded-xl font-bold text-xs text-indigo-300">
+                        <i class="fas fa-mobile-alt mr-1"></i> ${gameState.players[k].name}
+                    </div>
+                `).join('');
+                const startBtn = document.getElementById('startHostBtn');
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                list.innerHTML = `<p class="text-xs text-slate-500 self-center">Waiting for devices to connect...</p>`;
+                const startBtn = document.getElementById('startHostBtn');
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        async function startHostGame() {
+            document.getElementById('startHostBtn').innerText = "Loading Questions...";
+            gameState.questions = await fetchQuestions();
+            gameState.currentIdx = 0;
+
+            Object.keys(gameState.players).forEach(k => {
+                gameState.players[k].score = 0;
+                gameState.players[k].correctAnswers = 0;
+                gameState.players[k].wrongAnswers = 0;
+            });
+
+            document.getElementById('hostLobbyScreen').classList.add('hidden');
+            document.getElementById('hostGameScreen').classList.remove('hidden');
+            document.getElementById('hostCategoryPill').innerText = `${selectedCategoryName} (${selectedDifficulty.toUpperCase()})`;
+            
+            renderHostQuestion();
+        }
+
+        function renderHostQuestion() {
+            const q = gameState.questions[gameState.currentIdx];
+            gameState.answersReceived = 0;
+            
+            Object.keys(gameState.players).forEach(k => gameState.players[k].answered = -1);
+
+            document.getElementById('resultsPanel').classList.add('hidden');
+            document.getElementById('currentQNum').innerText = gameState.currentIdx + 1;
+            document.getElementById('questionText').innerText = q.question;
+            document.getElementById('answeredCount').innerText = "0";
+            document.getElementById('totalPlayersCount').innerText = Object.keys(gameState.players).length;
+
+            const isLast = gameState.currentIdx >= gameState.questions.length - 1;
+            document.getElementById('nextQBtn').innerHTML = isLast 
+                ? `<span>View Final Summary</span> <i class="fas fa-trophy"></i>` 
+                : `<span>Next Question</span> <i class="fas fa-arrow-right"></i>`;
+
+            document.getElementById('optionsGrid').innerHTML = q.options.map((opt, i) => `
+                <div id="optionCard-${i}" class="p-4 bg-slate-800 rounded-xl font-bold text-sm text-slate-300 flex items-center gap-3 border border-slate-700 transition-all">
+                    <span id="optionBadge-${i}" class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xs">
+                        ${['A','B','C','D'][i]}
+                    </span>
+                    <span class="flex-1">${opt}</span>
+                </div>
+            `).join('');
+
+            updateLiveDeviceStatuses();
+            broadcast({ type: 'NEW_QUESTION', index: gameState.currentIdx, duration: QUESTION_TIME });
+            startTimer();
+        }
+
+        function updateLiveDeviceStatuses(revealed = false) {
+            const container = document.getElementById('liveDeviceStatuses');
+            const pKeys = Object.keys(gameState.players);
+            const q = gameState.questions[gameState.currentIdx];
+
+            if (pKeys.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-500 italic">No connected devices</span>`;
+                return;
+            }
+
+            container.innerHTML = pKeys.map(k => {
+                const p = gameState.players[k];
+                if (revealed) {
+                    const isRight = p.answered === q.correct;
+                    return isRight 
+                        ? `<div class="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-xl font-bold text-xs text-emerald-300 flex items-center gap-1.5">
+                            <i class="fas fa-check-circle text-emerald-400"></i> ${p.name} <span class="text-[10px] bg-emerald-500/30 px-1.5 py-0.5 rounded text-white font-black">RIGHT</span>
+                           </div>`
+                        : `<div class="px-3 py-1.5 bg-rose-500/20 border border-rose-500/40 rounded-xl font-bold text-xs text-rose-300 flex items-center gap-1.5">
+                            <i class="fas fa-times-circle text-rose-400"></i> ${p.name} <span class="text-[10px] bg-rose-500/30 px-1.5 py-0.5 rounded text-white font-black">WRONG</span>
+                           </div>`;
+                } else {
+                    const hasAnswered = p.answered !== -1;
+                    return hasAnswered
+                        ? `<div class="px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/40 rounded-xl font-bold text-xs text-indigo-300 flex items-center gap-1.5">
+                            <i class="fas fa-check text-indigo-400"></i> ${p.name}
+                           </div>`
+                        : `<div class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl font-bold text-xs text-slate-400 flex items-center gap-1.5">
+                            <i class="fas fa-hourglass-half text-slate-500"></i> ${p.name}
+                           </div>`;
+                }
+            }).join('');
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = QUESTION_TIME;
+            
+            const timerRing = document.getElementById('timerRing');
+            const timerText = document.getElementById('timerText');
+            
+            timerText.innerText = timeLeft;
+            if (timerRing) timerRing.style.strokeDashoffset = '0';
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                if (timerText) timerText.innerText = timeLeft;
+                
+                if (timerRing) {
+                    const offset = 100 - (timeLeft / QUESTION_TIME) * 100;
+                    timerRing.style.strokeDashoffset = offset.toString();
+                }
+
+                broadcast({ type: 'TIMER_TICK', timeLeft: timeLeft });
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    evaluateAnswers();
+                }
+            }, 1000);
+        }
+
+        function evaluateAnswers() {
+            const q = gameState.questions[gameState.currentIdx];
+
+            Object.keys(gameState.players).forEach(k => {
+                const p = gameState.players[k];
+                if (p.answered === q.correct) {
+                    p.score += 100;
+                    p.correctAnswers++;
+                } else {
+                    p.wrongAnswers++;
+                }
+            });
+
+            q.options.forEach((_, i) => {
+                const card = document.getElementById(`optionCard-${i}`);
+                if (i === q.correct) {
+                    card.className = "p-4 bg-emerald-500/20 border-2 border-emerald-500 rounded-xl font-bold text-sm text-emerald-200 flex items-center gap-3";
+                } else {
+                    card.className = "p-4 bg-slate-800/40 border border-slate-800 rounded-xl font-bold text-sm text-slate-500 opacity-60 flex items-center gap-3";
+                }
+            });
+
+            updateLiveDeviceStatuses(true);
+            document.getElementById('resultsPanel').classList.remove('hidden');
+            
+            broadcast({ 
+                type: 'ROUND_RESULTS', 
+                correctIndex: q.correct 
+            });
+        }
+
+        function nextHostQuestion() {
+            gameState.currentIdx++;
+            if (gameState.currentIdx >= gameState.questions.length) {
+                showFinalSummary();
+            } else {
+                renderHostQuestion();
+            }
+        }
+
+        function showFinalSummary() {
+            document.getElementById('hostGameScreen').classList.add('hidden');
+            document.getElementById('finalStatsScreen').classList.remove('hidden');
+            document.getElementById('finalCategoryPlayed').innerText = `Category: ${selectedCategoryName} (${selectedDifficulty.toUpperCase()})`;
+
+            const playersArr = Object.values(gameState.players).sort((a, b) => b.score - a.score);
+            
+            if (playersArr.length > 0) {
+                document.getElementById('winnerText').innerText = `${playersArr[0].name} (${playersArr[0].score} pts)`;
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            }
+
+            const statsList = document.getElementById('playerStatsList');
+            statsList.innerHTML = playersArr.map((p, idx) => `
+                <div class="p-4 glass rounded-2xl flex items-center justify-between border border-slate-700/50">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl ${idx === 0 ? 'bg-amber-400 text-slate-900' : 'bg-slate-800 text-slate-300'} font-black text-sm flex items-center justify-center">
+                            #${idx + 1}
+                        </span>
+                        <div>
+                            <h4 class="font-bold text-white text-sm">${p.name}</h4>
+                            <p class="text-[11px] text-slate-400">${p.correctAnswers} Correct / ${p.wrongAnswers} Wrong</p>
+                        </div>
+                    </div>
+                    <span class="font-black text-indigo-400 text-lg">${p.score} pts</span>
+                </div>
+            `).join('');
+
+            broadcast({ type: 'GAME_OVER' });
+        }
+
+        function pickNewGame() {
+            document.getElementById('finalStatsScreen').classList.add('hidden');
+            document.getElementById('hostLobbyScreen').classList.remove('hidden');
+            document.getElementById('startHostBtn').innerText = "Start Game";
+        }
+
+        function broadcast(msg) {
+            connections.forEach(conn => {
+                if (conn.open) conn.send(msg);
+            });
+        }
+
+        // ================= CONTROLLER / PLAYER LOGIC =================
+        function showJoinScreen() {
+            document.getElementById('modeScreen').classList.add('hidden');
+            document.getElementById('joinScreen').classList.remove('hidden');
+        }
+
+        function clearNameError() {
+            document.getElementById('nameError').classList.add('hidden');
+        }
+
+        function joinGame() {
+            const code = document.getElementById('joinRoomCode').value.trim();
+            const name = document.getElementById('playerName').value.trim();
+
+            if (code.length !== 4) {
+                document.getElementById('codeError').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('codeError').classList.add('hidden');
+            }
+
+            if (!name) {
+                document.getElementById('nameError').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('connectBtn').innerText = "Connecting...";
+
+            peer = new Peer(PEER_CONFIG);
+
+            peer.on('open', () => {
+                hostConn = peer.connect(PEER_PREFIX + code);
+
+                hostConn.on('open', () => {
+                    hostConn.send({ type: 'JOIN', name: name });
+                });
+
+                hostConn.on('data', (data) => handleControllerMessage(data, name));
+                
+                hostConn.on('close', () => {
+                    alert("Disconnected from host room.");
+                    location.reload();
+                });
+            });
+
+            peer.on('error', (err) => {
+                console.error("Peer JS Controller Error:", err);
+                alert("Could not connect to room code. Ensure the host is running.");
+                document.getElementById('connectBtn').innerText = "Connect Controller";
+            });
+        }
+
+        function handleControllerMessage(data, name) {
+            if (data.type === 'JOIN_SUCCESS') {
+                document.getElementById('joinScreen').classList.add('hidden');
+                document.getElementById('controllerScreen').classList.remove('hidden');
+                document.getElementById('controllerPlayerName').innerText = name;
+                document.getElementById('controllerStatus').innerText = "Waiting for round to start...";
+                toggleControllerButtons(false);
+            } else if (data.type === 'NEW_QUESTION') {
+                document.getElementById('controllerStatus').innerText = "Select your answer!";
+                toggleControllerButtons(true);
+            } else if (data.type === 'TIMER_TICK') {
+                document.getElementById('playerTimer').innerText = `⏱️ ${data.timeLeft}s`;
+            } else if (data.type === 'ROUND_RESULTS') {
+                document.getElementById('controllerStatus').innerText = "Round over! Look at host display.";
+                toggleControllerButtons(false);
+            } else if (data.type === 'GAME_OVER') {
+                document.getElementById('controllerStatus').innerText = "Game finished! Look at main screen.";
+                toggleControllerButtons(false);
+            }
+        }
+
+        function sendAnswer(index) {
+            if (hostConn && hostConn.open) {
+                hostConn.send({ type: 'SUBMIT_ANSWER', index: index });
+                document.getElementById('controllerStatus').innerText = "Answer submitted! Waiting for others...";
+                toggleControllerButtons(false);
+            }
+        }
+
+        function toggleControllerButtons(enabled) {
+            const btns = document.querySelectorAll('#controllerButtons button');
+            btns.forEach(b => b.disabled = !enabled);
         }
     </script>
 </body>
